@@ -14,6 +14,10 @@
 | MCP 映射 | `stable` / `39-1.12` |
 | 内置 Mixin | CleanMix 0.4.6（Mixin 0.8.7 分支，随 Cleanroom 附带，无需额外依赖） |
 | LWJGL | 3.4.1（Cleanroom 自带） |
+| 目标 mod | **Modular Machinery: Community Edition** `2.3.2`（+ 其硬依赖 CraftTweaker `4.1.20.715`） |
+
+本仓库已经是一个 **MMCE 附属 mod**（见 [docs/mmce-addon.md](docs/mmce-addon.md)），已实现方块
+`modulargrid:access_plug`（流通数据节点 / Data Flow Access Plug）。
 
 > 注意：`Cleanroom 0.6.x` 只能跑在 Java 21+，本工作区按你的要求固定为 **JDK 25**。
 
@@ -91,11 +95,26 @@ mod_logo_path =
 包名 / 目录对应关系：
 
 ```
-src/main/java/com/modulargrid/ExampleMod.java        <- 主类（@Mod），需要改名的话改这里
-src/main/resources/mcmod.info                        <- 由 gradle.properties 自动填充
-src/main/resources/pack.mcmeta                       <- 同上
-src/main/resources/modulargrid_at.cfg                <- 访问转换器示例
-src/main/resources/mixins.modulargrid.json           <- Mixin 配置（当前已启用示例）
+src/main/java/com/modulargrid/
+├── ModularGrid.java                                  <- 主类（@Mod）
+├── client/ClientProxy.java                           <- 模型 + 颜色注册
+├── common/CommonProxy.java                           <- 注册事件挂载
+├── common/block/BlockAccessPlug.java                 <- 流通数据节点
+├── common/tile/TileAccessPlug.java                   <- 其 TileEntity（行为待补）
+├── common/registry/RegistryBlocks.java               <- 方块/方块物品/TileEntity
+└── common/registry/RegistryItems.java                <- 物品
+
+src/main/resources/
+├── mcmod.info / pack.mcmeta                          <- 由 gradle.properties 自动填充
+├── modulargrid_at.cfg                                <- 自己的访问转换器示例
+└── assets/modulargrid/
+    ├── blockstates/access_plug.json
+    ├── models/block/{access_plug,blockmodel_overlay,blockmodel_overlay_all}.json
+    ├── models/item/access_plug.json
+    ├── textures/blocks/access_grid.png               <- overlay 贴图（外壳沿用 MMCE 的）
+    └── lang/{en_us,zh_cn}.lang
+
+gradle/dev_access_transformers.cfg                    <- 仅开发环境生效的 AT（见文档）
 tags.properties                                      <- 生成 com.modulargrid.Tags 的键值
 ```
 
@@ -246,6 +265,19 @@ cleanroom_version = 0.6.13-alpha
 * **`Cannot mutate content repository descriptor 'modsRemap(...)'`**
   说明在 Unimined 的 `mods {}` 之后又用了 `exclusiveContent {}` 添加仓库。
   本工作区的 `dependencies.gradle` 已改成普通 `maven {}` 声明；自己加仓库时也请用普通 `maven {}`。
+* **`ClassCastException: ... MMCELateMixinLoader cannot be cast to zone.rong.mixinbooter.ILateMixinLoader`**
+  mod 被放在运行 classpath（app class loader）而不是 launch class loader 上。MMCE 这类 coremod 必须放进
+  `run/<side>/mods`（本仓库的 `runMods` + `copyRunMods*` 任务就是这么做的）。
+* **`NoSuchMethodError: JsonParser.parseReader` / 巨量 `Unable to read a class file correctly`**
+  有 mod 从 Maven 带进了旧版 `gson` / `asm-debug-all:5.2`，遮蔽了 Cleanroom 自带的现代版本。
+  从 classpath 上排除它们（本仓库不再把 mod 依赖放 classpath，改为放 `run/<side>/mods`）。
+* **`Invalid access transformer line ...: #`（配置阶段就失败）**
+  AT 文件里出现了只有 `#` 的纯注释行，删掉即可。
+* **`IllegalAccessError: tried to access private field ...`（例如 CraftTweaker 的 `LanguageMap.instance`）**
+  Cleanroom 不会在开发环境把 mod 自带的 SRG 名 AT 映射成 MCP 名。用
+  `gradle/dev_access_transformers.cfg` 补（见 [docs/mmce-addon.md](docs/mmce-addon.md) §4）。
+* **客户端日志里一堆 `modularmachinery:xxx_controller` 模型加载失败**
+  MMCE 的“自定义控制器”模型是运行时生成的，开发环境没生成就会有这些报错，与附属 mod 无关。
 * **`Failed to read mod metadata from <目录>`**
   见 §7。开启 `use_mixins` 后本工作区已自动规避；不开 Mixin 时该报错无害，mod 仍能正常加载。
 * **Gradle 找不到 JDK 25**

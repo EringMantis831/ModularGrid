@@ -1,0 +1,16 @@
+{
+    "forge_marker": 1,
+    "defaults": {
+        "model": "modulargrid:access_plug"
+    },
+    "variants": {
+        "normal": {
+            "model": "modulargrid:access_plug"
+        },
+        "inventory": [
+            {
+                "transform": "forge:default-block"
+            }
+        ]
+    }
+}

@@ -10,11 +10,31 @@ repositories {
         name 'Modrinth'
         url 'https://api.modrinth.com/maven'
     }
+    maven {
+        // CraftTweaker 2
+        name 'BlameJared'
+        url 'https://maven.blamejared.com/'
+    }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
 }
 
 dependencies {
+    // ----------------------------------------------------------------------------------------------------------------
+    // Modular Machinery: Community Edition
+    // ----------------------------------------------------------------------------------------------------------------
+    // Compiled against MMCE's *release* jar from CurseMaven. Unimined deobfuscates it, so the mod is available under
+    // MCP names here (same names this project is compiled with) and the built jar links against MMCE's SRG names at
+    // runtime.
+    modCompileOnly "curse.maven:${propertyString('mmce_curse_file')}"
+
+    // MMCE is a coremod that depends on CraftTweaker, and both must be loaded by the launch class loader. Dropping the
+    // real release jars into run/<side>/mods is the only reliable way to do that (putting them on the run class path
+    // loads them from the app class loader and MMCE's mixin loader then cannot see MixinBooter's interfaces).
+    // `syncRunMods` copies them before every run, see build.gradle.
+    runMods("curse.maven:${propertyString('mmce_curse_file')}") { transitive = false }
+    runMods("curse.maven:${propertyString('crafttweaker_curse_file')}") { transitive = false }
+
     // Example - Dependency descriptor:
     // 'com.google.code.gson:gson:2.8.6' << group: com.google.code.gson, name:gson, version:2.8.6
     // 'group:name:version:classifier' where classifier is optional
@@ -23,11 +43,12 @@ dependencies {
     // modImplementation 'mezz:jei:4.35.0:dev' << dependency available at compile time and runtime
     // modCompileOnly 'mezz:jei:4.35.0:dev'    << dependency available only at compile time
     // modRuntimeOnly 'mezz:jei:4.35.0:dev'    << dependency available only at runtime
+    // NOTE: mod* configurations must be used for ordinary mod jars (they are SRG named), MMCE above is the exception
+    //       because its jar is already a development jar.
 
     // Example - CurseMaven dependencies:
     // 'curse.maven:had-enough-items-557549:4543375' << had-enough-items = project slug, 557549 = project id, 4543375 = file id
     // Full documentation: https://cursemaven.com/
-    // Wrap it in rfg-less form, e.g. modImplementation 'curse.maven:jei-238222:5101365'
 
     // Example - Modrinth dependencies:
     // 'maven.modrinth:jei:4.16.1.1000' << jei = project name, 4.16.1.1000 = file version

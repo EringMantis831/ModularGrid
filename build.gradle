@@ -101,6 +101,12 @@ configurations {
     compileOnly.extendsFrom(modCompileOnly)
     modRuntimeOnly
     runtimeOnly.extendsFrom(modRuntimeOnly)
+    // External mods that are copied into run/<side>/mods for the development runs, see syncRunMods below
+    runMods {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
 }
 
 // Values captured for the run configurations below
@@ -120,6 +126,10 @@ unimined.minecraft {
     }
 
     cleanroom {
+        // Development-only access transformers, applied to the Minecraft dev jar. Mods that ship their own
+        // (SRG named) access transformers - CraftTweaker for example - cannot have them applied in a dev
+        // environment by Cleanroom itself, so they are listed there instead.
+        accessTransformer file('gradle/dev_access_transformers.cfg')
         if (useAccessTransformer) {
             accessTransformer file("src/main/resources/${propertyString('access_transformer_locations')}")
         }
@@ -204,6 +214,21 @@ apply from: 'gradle/scripts/dependencies.gradle'
 // ---------------------------------------------------------------------------------------------------------------------
 // Development runs
 // ---------------------------------------------------------------------------------------------------------------------
+
+// Mods that have to live in run/<side>/mods instead of on the run class path (coremods, MixinBooter implementors).
+def copyRunModsTask(String side) {
+    return tasks.register("copyRunMods${side.capitalize()}", Copy) {
+        group = 'cleanroom helpers'
+        description = "Copies the external mods needed by run${side.capitalize()} into run/${side}/mods"
+        from configurations.runMods
+        into layout.projectDirectory.dir("run/${side}/mods")
+    }
+}
+
+def clientRunMods = copyRunModsTask('client')
+def serverRunMods = copyRunModsTask('server')
+tasks.matching { it.name == 'runClient' }.configureEach { dependsOn clientRunMods }
+tasks.matching { it.name == 'runServer' }.configureEach { dependsOn serverRunMods }
 
 // Cleanroom 0.6.0-alpha cannot scan *directory* classpath entries (fixed in 0.6.1+), which means the
 // mod would not be discovered as a mod and dev mixins would fail to load.
