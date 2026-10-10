@@ -1,0 +1,13 @@
+{
+  "package": "com.modulargrid.mixin",
+  "required": true,
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.8.7",
+  "compatibilityLevel": "JAVA_25",
+  "setSourceFile": true,
+  "mixins": [
+    "MinecraftServerMixin"
+  ],
+  "server": [],
+  "client": []
+}

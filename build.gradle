@@ -1,0 +1,494 @@
+/**
+ * Cleanroom 1.12.2 mod development workspace.
+ *
+ * Toolchain: Unimined (Cleanroom fork) + Cleanroom Loader + Java 25
+ * It is advised that you do not edit anything in the build.gradle; unless you are sure of what you are doing
+ */
+import net.darkhax.curseforgegradle.TaskPublishCurseForge
+import org.jetbrains.changelog.Changelog
+import org.jetbrains.gradle.ext.Gradle
+
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.4.1'
+    // Unimined fork with Cleanroom Loader support, hosted on maven.arcseekers.com
+    id 'xyz.wagyourtail.unimined' version '1.4.43-kappa'
+    id 'net.darkhax.curseforgegradle' version '1.+' apply false
+    id 'com.modrinth.minotaur' version '2.+' apply false
+    id 'org.jetbrains.changelog' version '2.5.0'
+    id 'com.gradleup.shadow' version '9.6.+'
+}
+
+apply from: 'gradle/scripts/helpers.gradle'
+
+// Early Assertions
+assertProperty 'mod_version'
+assertProperty 'root_package'
+assertProperty 'mod_id'
+assertProperty 'mod_name'
+assertProperty 'cleanroom_version'
+
+assertSubProperties 'use_tags', 'tag_class_name'
+assertSubProperties 'use_access_transformer', 'access_transformer_locations'
+assertSubProperties 'use_mixins', 'mixin_configs'
+assertSubProperties 'is_coremod', 'coremod_includes_mod', 'coremod_plugin_class_name'
+assertSubProperties 'use_asset_mover', 'asset_mover_version'
+
+setDefaultProperty 'java_version', true, '25'
+setDefaultProperty 'generate_sources_jar', true, true
+setDefaultProperty 'generate_javadocs_jar', true, false
+setDefaultProperty 'enable_shadow', false, false
+setDefaultProperty 'enable_lwjglx', false, true
+setDefaultProperty 'enable_junit_testing', true, true
+setDefaultProperty 'show_testing_output', false, false
+setDefaultProperty 'mapping_channel', true, 'stable'
+setDefaultProperty 'mapping_version', true, '39-1.12'
+setDefaultProperty 'minecraft_username', true, 'Developer'
+setDefaultProperty 'extra_jvm_args', false, ''
+setDefaultProperty 'extra_tweak_classes', false, ''
+setDefaultProperty 'enable_foundation_debug', false, false
+setDefaultProperty 'publish_to_maven', true, false
+setDefaultProperty 'publish_to_curseforge', true, false
+setDefaultProperty 'publish_to_modrinth', true, false
+setDefaultProperty 'mixin_connector_class', false, ''
+setDefaultProperty 'mixin_package', true, "${propertyString('root_package')}.mixin"
+setDefaultProperty 'generate_mixins_json', true, false
+
+// Plain Java values, safe to capture inside nested closures
+def javaVersionNumber = Integer.parseInt(propertyString('java_version'))
+def javaVersion = JavaVersion.toVersion(propertyString('java_version'))
+def useMixins = propertyBool('use_mixins')
+def useAccessTransformer = propertyBool('use_access_transformer')
+def useShadow = propertyBool('enable_shadow')
+def isCoremod = propertyBool('is_coremod')
+
+version = propertyString('mod_version')
+group = propertyString('root_package')
+
+base {
+    archivesName.set(propertyString('mod_id'))
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(javaVersionNumber))
+    }
+    if (propertyBool('generate_sources_jar')) {
+        withSourcesJar()
+    }
+    if (propertyBool('generate_javadocs_jar')) {
+        withJavadocJar()
+    }
+}
+
+compileJava {
+    sourceCompatibility = targetCompatibility = javaVersion
+    options.encoding = 'UTF-8'
+}
+
+compileTestJava {
+    sourceCompatibility = targetCompatibility = javaVersion
+}
+
+configurations {
+    // "contain" bundles jars inside the output jar (Cleanroom ContainedDeps / jar-in-jar)
+    contain
+    implementation.extendsFrom(contain)
+    // Mod dependencies
+    modCompileOnly
+    compileOnly.extendsFrom(modCompileOnly)
+    modRuntimeOnly
+    runtimeOnly.extendsFrom(modRuntimeOnly)
+}
+
+// Values captured for the run configurations below
+def devMixinConfigs = useMixins ? propertyStringList('mixin_configs').join(',') : ''
+def runUsername = propertyString('minecraft_username')
+def extraTweakClasses = propertyStringList('extra_tweak_classes')
+def extraJvmArgs = propertyString('extra_jvm_args')
+def foundationDebug = propertyBool('enable_foundation_debug')
+def coremodPluginClass = isCoremod ? propertyString('coremod_plugin_class_name') : ''
+
+//noinspection GroovyAssignabilityCheck
+unimined.minecraft {
+    version '1.12.2'
+
+    mappings {
+        mcp(propertyString('mapping_channel'), propertyString('mapping_version'))
+    }
+
+    cleanroom {
+        if (useAccessTransformer) {
+            accessTransformer file("src/main/resources/${propertyString('access_transformer_locations')}")
+        }
+        loader propertyString('cleanroom_version')
+        runs.all {
+            if (!devMixinConfigs.isEmpty()) {
+                // Tells CleanMix which mixin configs to load in a development environment
+                systemProperty('crl.dev.mixin', devMixinConfigs)
+            }
+            args += ['--username', runUsername]
+            for (String tweakClass : extraTweakClasses) {
+                args += ['--tweakClass', tweakClass]
+            }
+            if (extraJvmArgs != null && !extraJvmArgs.trim().isEmpty()) {
+                jvmArgs += extraJvmArgs.split { '\\s+' }.toList()
+            }
+            if (foundationDebug) {
+                systemProperty('foundation.dump', 'true')
+                systemProperty('foundation.verbose', 'true')
+            }
+            if (!coremodPluginClass.isEmpty()) {
+                systemProperty('fml.coreMods.load', coremodPluginClass)
+            }
+        }
+    }
+
+    defaultRemapJar = false
+
+    String jarTaskName = useShadow ? 'shadowJar' : 'jar'
+
+    remap(tasks.named(jarTaskName).get()) {
+        if (useMixins) {
+            mixinRemap {
+                enableBaseMixin()
+                enableMixinExtra()
+            }
+        }
+    }
+
+    mods {
+        remap(configurations.modCompileOnly)
+        remap(configurations.modRuntimeOnly)
+    }
+}
+
+repositories {
+    maven {
+        name 'CleanroomMC'
+        url 'https://maven.cleanroommc.com'
+    }
+    maven {
+        // Mojang / Forge libraries used by the toolchain
+        name 'MinecraftForge'
+        url 'https://maven.minecraftforge.net/'
+    }
+    maven {
+        name 'FabricMC'
+        url 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name 'WagYourTail'
+        url 'https://maven.wagyourtail.xyz/releases'
+    }
+}
+
+dependencies {
+    if (propertyBool('enable_lwjglx')) {
+        // LWJGL2 compatibility layer shipped by Cleanroom
+        compileOnly "com.cleanroommc:lwjglx:1.0.0"
+    }
+    if (propertyBool('use_asset_mover')) {
+        implementation "com.cleanroommc:assetmover:${propertyString('asset_mover_version')}"
+    }
+    if (propertyBool('enable_junit_testing')) {
+        testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+}
+
+apply from: 'gradle/scripts/dependencies.gradle'
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Development runs
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Cleanroom 0.6.0-alpha cannot scan *directory* classpath entries (fixed in 0.6.1+), which means the
+// mod would not be discovered as a mod and dev mixins would fail to load.
+// Unimined puts the compiled classes and processed resources into "crl.dev.extrapath" as directories,
+// so for mixin enabled builds that property is repointed at the (MCP named) dev jar instead.
+if (useMixins) {
+    def devJarFile = tasks.named('jar').flatMap { it.archiveFile }
+    tasks.matching { it.name in ['runClient', 'runServer'] }.configureEach { runTask ->
+        runTask.dependsOn 'jar'
+        runTask.doFirst {
+            File devJar = devJarFile.get().asFile
+            // Cleanroom adds the extra paths to the launch class loader only *after* Mixin has been
+            // initialised (FMLLaunchHandler#setupHome), so the mixin config has to be reachable
+            // through the regular class path as well.
+            runTask.classpath(devJar)
+            runTask.setJvmArgs(runTask.jvmArgs.collect { arg ->
+                arg.startsWith('-Dcrl.dev.extrapath=') ? "-Dcrl.dev.extrapath=${devJar.absolutePath}".toString() : arg
+            })
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Tags (build-time generated constants)
+// ---------------------------------------------------------------------------------------------------------------------
+
+def tagsOutDir = layout.buildDirectory.dir('generated/sources/tags/java/main')
+def tagsPropertiesFile = file('tags.properties')
+def tagClassName = propertyString('tag_class_name')
+def tagPackage = tagClassName.substring(0, tagClassName.lastIndexOf('.'))
+def tagSimpleName = tagClassName.substring(tagClassName.lastIndexOf('.') + 1)
+
+if (propertyBool('use_tags')) {
+    if (!tagsPropertiesFile.exists()) {
+        throw new GradleException('use_tags is true, but tags.properties does not exist in the workspace!')
+    }
+    def tagValues = new Properties()
+    tagsPropertiesFile.withInputStream { tagValues.load(it) }
+    def resolvedTags = tagValues.collectEntries { key, value ->
+        def interpolated = interpolate(value.toString())
+        if (interpolated == null || interpolated.isEmpty()) {
+            throw new GradleException("Empty tag value found for key: ${key}")
+        }
+        [(key.toString()): interpolated.toString()]
+    }
+    if (resolvedTags.isEmpty()) {
+        throw new GradleException('use_tags is true, but tags.properties is empty!')
+    }
+
+    tasks.register('generateTags') {
+        group = 'cleanroom helpers'
+        description = 'Generates the Tags class from tags.properties'
+        inputs.properties(resolvedTags)
+        outputs.dir(tagsOutDir)
+        doLast {
+            def outputFile = tagsOutDir.get().file("${tagPackage.replace('.', '/')}/${tagSimpleName}.java").asFile
+            outputFile.parentFile.mkdirs()
+            def fields = resolvedTags.collect { key, value ->
+                "    public static final String ${key} = \"${value}\";"
+            }.join('\n')
+            outputFile.text = """package ${tagPackage};
+
+/**
+ * Generated by the generateTags task from tags.properties - do not edit.
+ */
+public class ${tagSimpleName} {
+${fields}
+
+    private ${tagSimpleName}() {
+    }
+}
+"""
+        }
+    }
+
+    sourceSets.main.java.srcDir(tagsOutDir)
+    tasks.named('compileJava').configure { dependsOn 'generateTags' }
+    tasks.matching { it.name in ['sourcesJar', 'javadocJar'] }.configureEach { dependsOn 'generateTags' }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Mixin config scaffolding
+// ---------------------------------------------------------------------------------------------------------------------
+
+tasks.register('generateMixinJson') {
+    group = 'cleanroom helpers'
+    description = 'Creates missing mixin configuration files listed in mixin_configs'
+    def missingConfigs = propertyStringList('mixin_configs').findAll { config ->
+        !file("src/main/resources/${config}").exists()
+    }
+    onlyIf {
+        propertyBool('use_mixins') && propertyBool('generate_mixins_json') && !missingConfigs.isEmpty()
+    }
+    doLast {
+        for (String mixinConfig : missingConfigs) {
+            file("src/main/resources/${mixinConfig}") << """{
+\t"package": "${propertyString('mixin_package')}",
+\t"required": true,
+\t"target": "@env(DEFAULT)",
+\t"minVersion": "0.8.7",
+\t"compatibilityLevel": "JAVA_${propertyString('java_version')}",
+\t"setSourceFile": true,
+\t"mixins": [],
+\t"server": [],
+\t"client": []
+}
+"""
+        }
+    }
+}
+
+processResources {
+    inputs.property 'mod_id', propertyString('mod_id')
+    inputs.property 'mod_name', propertyString('mod_name')
+    inputs.property 'mod_version', propertyString('mod_version')
+    inputs.property 'mod_description', propertyString('mod_description')
+    inputs.property 'mod_authors', "${propertyStringList('mod_authors', ',').join(', ')}"
+    inputs.property 'mod_credits', propertyString('mod_credits')
+    inputs.property 'mod_url', propertyString('mod_url')
+    inputs.property 'mod_update_json', propertyString('mod_update_json')
+    inputs.property 'mod_logo_path', propertyString('mod_logo_path')
+    inputs.property 'mod_issue_tracker', propertyString('mod_issue_tracker')
+
+    filesMatching(['mcmod.info', 'pack.mcmeta']) { fcd ->
+        fcd.expand(
+                'mod_id': propertyString('mod_id'),
+                'mod_name': propertyString('mod_name'),
+                'mod_version': propertyString('mod_version'),
+                'mod_description': propertyString('mod_description'),
+                'mod_authors': "${propertyStringList('mod_authors', ',').join(', ')}",
+                'mod_credits': propertyString('mod_credits'),
+                'mod_url': propertyString('mod_url'),
+                'mod_update_json': propertyString('mod_update_json'),
+                'mod_logo_path': propertyString('mod_logo_path'),
+                'mod_issue_tracker': propertyString('mod_issue_tracker')
+        )
+    }
+
+    if (useAccessTransformer) {
+        rename '(.+_at.cfg)', 'META-INF/$1'
+    } else {
+        exclude '**/*_at.cfg'
+    }
+
+    dependsOn 'generateMixinJson'
+}
+
+jar {
+    archiveClassifier = 'dev'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    if (!configurations.contain.isEmpty()) {
+        into('/') {
+            from configurations.contain
+        }
+    }
+
+    manifest {
+        def attribute_map = [:]
+        attribute_map['ModType'] = 'CRL'
+        if (!configurations.contain.isEmpty()) {
+            attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
+            attribute_map['NonModDeps'] = true
+        }
+        if (isCoremod) {
+            attribute_map['FMLCorePlugin'] = propertyString('coremod_plugin_class_name')
+            if (propertyBool('coremod_includes_mod')) {
+                attribute_map['FMLCorePluginContainsFMLMod'] = true
+            }
+        }
+        if (useAccessTransformer) {
+            attribute_map['FMLAT'] = propertyString('access_transformer_locations')
+        }
+        if (useMixins) {
+            def mixinConfigs = propertyStringList('mixin_configs')
+            if (!mixinConfigs.isEmpty()) {
+                attribute_map['MixinConfigs'] = mixinConfigs.join(',')
+            }
+        }
+        def mixinConnectorClass = propertyString('mixin_connector_class')
+        if (!mixinConnectorClass.isEmpty()) {
+            attribute_map['MixinConnector'] = mixinConnectorClass
+        }
+        attributes(attribute_map)
+    }
+
+    finalizedBy(tasks.named(useShadow ? 'remapShadowJar' : 'remapJar').get())
+}
+
+shadowJar {
+    //noinspection GroovyAssignabilityCheck,GroovyAccessibility
+    configurations = [project.configurations.shadow]
+    archiveClassifier = 'shadow'
+}
+
+if (!useShadow) {
+    // Shadow wires shadowJar into assemble; keep the output clean when shading is off
+    tasks.named('shadowJar').configure { enabled = false }
+}
+
+test {
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(javaVersionNumber)
+    })
+    if (propertyBool('show_testing_output')) {
+        testLogging {
+            showStandardStreams = true
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Remove the annoying blue icon from IntelliJ, use the run configurations below instead
+tasks.matching { it.name == 'genIntellijRuns' }.configureEach {
+    enabled = false
+}
+
+idea {
+    module {
+        inheritOutputDirs = true
+    }
+    project {
+        settings {
+            runConfigurations {
+                '1. Run Client'(Gradle) {
+                    taskNames = ['runClient']
+                }
+                '2. Run Server'(Gradle) {
+                    taskNames = ['runServer']
+                }
+                '3. Build'(Gradle) {
+                    taskNames = ['build']
+                }
+                '4. Gen Sources'(Gradle) {
+                    taskNames = ['genSources']
+                }
+            }
+            compiler.javac {
+                afterEvaluate {
+                    javacAdditionalOptions = '-encoding utf8'
+                    moduleJavacAdditionalOptions = [
+                            (project.name + '.main'): tasks.compileJava.options.compilerArgs.collect { '"' + it + '"' }.join(' ')
+                    ]
+                }
+            }
+        }
+    }
+}
+
+tasks.register('cleanroomAfterSync') {
+    group = 'cleanroom helpers'
+    dependsOn 'generateTags', 'generateMixinJson'
+}
+
+idea.project.settings {
+    taskTriggers {
+        afterSync 'cleanroomAfterSync'
+    }
+}
+
+String parserChangelog() {
+    if (!file('CHANGELOG.md').exists()) {
+        throw new GradleException('publish_with_changelog is true, but CHANGELOG.md does not exist in the workspace!')
+    }
+    String parsedChangelog = changelog.renderItem(
+            changelog.get(propertyString('mod_version')).withHeader(false).withEmptySections(false),
+            Changelog.OutputType.MARKDOWN)
+    if (parsedChangelog.isEmpty()) {
+        throw new GradleException('publish_with_changelog is true, but the changelog for the latest version is empty!')
+    }
+    return parsedChangelog
+}
+
+if (propertyBool('publish_to_curseforge')) {
+    assertProperty 'curseforge_project_id'
+    apply plugin: 'net.darkhax.curseforgegradle'
+    tasks.register('curseforge', TaskPublishCurseForge) {
+        group 'publishing'
+        description "Uploads CurseForge project ${propertyString('curseforge_project_id')}"
+    }
+}
+
+apply from: 'gradle/scripts/publishing.gradle'
+apply from: 'gradle/scripts/extra.gradle'
