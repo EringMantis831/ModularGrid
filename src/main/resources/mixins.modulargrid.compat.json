@@ -1,0 +1,14 @@
+{
+  "package": "com.modulargrid.mixin",
+  "required": false,
+  "target": "@env(DEFAULT)",
+  "minVersion": "0.8.7",
+  "compatibilityLevel": "JAVA_25",
+  "plugin": "com.modulargrid.mixin.CompatMixinPlugin",
+  "setSourceFile": true,
+  "mixins": [
+    "CodeChickenLibReflectionMixin"
+  ],
+  "server": [],
+  "client": []
+}

@@ -1,2 +1,74 @@
-# ModularGrid / 流通数据节点
+# ModularGrid / Data Flow Access Plug
 tile.modulargrid.access_plug.name=Data Flow Access Plug
+
+# Channel commands
+command.modulargrid.usage=Usage: /modulargrid reg <name> [-p] [-e] | del <name> | list | set <name> <value>
+command.modulargrid.usage.reg=Usage: /modulargrid reg <name> [-p] [-e]
+command.modulargrid.usage.del=Usage: /modulargrid del <name>
+command.modulargrid.usage.list=Usage: /modulargrid list
+command.modulargrid.usage.set=Usage: /modulargrid set <name|player/name> <value>
+command.modulargrid.unknownSub=Unknown subcommand: %s
+command.modulargrid.playerOnly=This command can only be used by a player
+command.modulargrid.reg.ok=Registered channel %s (%s, %s)
+command.modulargrid.reg.invalid_name=Invalid channel name %s: use letters, digits, underscores or CJK characters, 1 to 24 of them
+command.modulargrid.reg.name_taken=You already own a channel named %s
+command.modulargrid.reg.name_firm=The id %s is used by a firm channel of this pack, pick another name
+command.modulargrid.reg.limit_reached=%s was not registered, you already reached the limit of %s channels
+command.modulargrid.reg.energy_already_exists=%s was not registered, you already have an energy channel
+command.modulargrid.reg.energy_not_allowed=You are not allowed to register Energy Channel!
+command.modulargrid.reg.unavailable=Channel storage is unavailable, please try again later
+command.modulargrid.reg.unknownFlag=Unknown flag: %s
+command.modulargrid.type.energy=energy
+command.modulargrid.type.normal=normal
+command.modulargrid.visibility.public=public
+command.modulargrid.visibility.firm=firm
+command.modulargrid.visibility.private=private
+command.modulargrid.del.unknown=No channel named %s
+command.modulargrid.del.notOwner=Channel %s belongs to %s, you can only delete your own channels
+command.modulargrid.del.firm=Channel %s is a firm channel defined by the pack, it cannot be deleted
+command.modulargrid.del.ok=Deleted channel %s
+command.modulargrid.list.empty=You have not registered any channel yet
+command.modulargrid.list.header=You own %s channel(s):
+command.modulargrid.list.entry=- %s [%s / %s] value: %s
+command.modulargrid.set.noPermission=You are not allowed to change channel values (requires operator permission level 2)
+command.modulargrid.set.invalidEnergy=%s is not a valid integer: energy channels store a long (-9223372036854775808 to 9223372036854775807)
+command.modulargrid.set.invalidFloat=%s is not a valid float
+command.modulargrid.set.unknownOwner=Unknown player %s
+command.modulargrid.set.unknown=No channel named %s
+command.modulargrid.set.ok=Value of channel %s is now %s
+command.modulargrid.list.entry.energy=- %s [%s / %s] stored energy: %s RF
+command.modulargrid.set.ok.energy=Stored energy of channel %s is now %s RF
+
+# Access plug GUI
+gui.modulargrid.access_plug.not_formed=The machine is not formed, no channel can be used
+gui.modulargrid.access_plug.no_channels=No channel available
+gui.modulargrid.access_plug.details=Channel details
+gui.modulargrid.access_plug.hint=Left click a channel in the list to switch it on or off
+gui.modulargrid.access_plug.row_meta=%s - %s
+gui.modulargrid.access_plug.row_meta_firm=%s - firm
+gui.modulargrid.access_plug.owner_firm=Firm channel (provided by the pack)
+gui.modulargrid.access_plug.energy_value=Stored energy: %s RF
+gui.modulargrid.access_plug.value=Value: %s
+gui.modulargrid.access_plug.type=Type: %s
+gui.modulargrid.access_plug.visibility=Visibility: %s
+gui.modulargrid.access_plug.owner=Owner: %s
+gui.modulargrid.access_plug.state.enabled=State: enabled
+gui.modulargrid.access_plug.state.enabled.energy_source=State: enabled (used by this machine)
+gui.modulargrid.access_plug.state.disabled=State: disabled
+
+# Messages
+message.modulargrid.notOwner=You do not own this machine
+message.modulargrid.channelGone=That channel has been deleted
+command.modulargrid.del.purged=Cleaned up stale entries on %s access plug(s)
+message.modulargrid.notFormed=This access plug does not belong to a formed machine yet
+
+# Item tooltip
+tile.modulargrid.access_plug.tooltip.transfer=Maximum input/transfer: §6unlimited§7 FE/t
+tile.modulargrid.access_plug.tooltip.voltage=Output voltage: §9LuV
+tile.modulargrid.access_plug.tooltip.circulation=§bWorks as a valid node of a Circulation Flow Networks grid
+tile.modulargrid.access_plug.tooltip.flux=§1Connects directly to Flux Networks
+tile.modulargrid.access_plug.tooltip.open=Open to manage channels
+gui.modulargrid.access_plug.flux_network=Flux Networks: %s
+gui.modulargrid.access_plug.flux_none=not connected
+gui.modulargrid.access_plug.flux_hint=Left: next network / Right: previous
+message.modulargrid.fluxMissing=Flux Networks is not installed

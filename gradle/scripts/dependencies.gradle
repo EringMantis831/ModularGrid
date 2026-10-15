@@ -15,6 +15,11 @@ repositories {
         name 'BlameJared'
         url 'https://maven.blamejared.com/'
     }
+    maven {
+        // GeckoLib, an optional dependency of MMCE
+        name 'GeckoLib'
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
 }
@@ -28,12 +33,61 @@ dependencies {
     // runtime.
     modCompileOnly "curse.maven:${propertyString('mmce_curse_file')}"
 
+    // CraftTweaker's scripting API (zenscript annotations, bracket handlers, global symbols, IEventHandler) is what the
+    // optional scripting integration in com.modulargrid.common.integration.crafttweaker compiles against: pack authors use
+    // it to drive channel data from recipes. Compile only - the integration is guarded by Loader.isModLoaded, and the
+    // release jar is already in run/<side>/mods above.
+    modCompileOnly "curse.maven:${propertyString('crafttweaker_curse_file')}"
+
+    // MMCE's TileMultiblockMachineController implements GeckoLib's IAnimatable, so GeckoLib has to be on the compile
+    // class path before members of that type can be resolved (the controller cannot even be handed a TileEntity method
+    // otherwise). It is strictly compile only: none of our classes reference GeckoLib types, and GeckoLib stays an
+    // optional runtime dependency exactly like it is for MMCE itself.
+    compileOnly 'software.bernie.geckolib:geckolib-forge-1.12.2:3.0.31'
+
     // MMCE is a coremod that depends on CraftTweaker, and both must be loaded by the launch class loader. Dropping the
     // real release jars into run/<side>/mods is the only reliable way to do that (putting them on the run class path
     // loads them from the app class loader and MMCE's mixin loader then cannot see MixinBooter's interfaces).
     // `syncRunMods` copies them before every run, see build.gradle.
     runMods("curse.maven:${propertyString('mmce_curse_file')}") { transitive = false }
     runMods("curse.maven:${propertyString('crafttweaker_curse_file')}") { transitive = false }
+
+    // CodeChickenLib is only needed to compile the optional compatibility mixin that keeps it working on
+    // modern Java (see CodeChickenLibReflectionMixin). Nothing ModularGrid ships refers to it, so a local
+    // jar in libs/dev is enough for the compiler and the mod itself stays an optional runtime neighbour.
+    compileOnly files('libs/dev/CodeChickenLib-1.12.2-3.2.3.358-universal.jar')
+
+    // IndustrialCraft 2 is an optional neighbour: the access plug speaks its energy net (EU) on top of Forge
+    // Energy, so the API has to be on the compile class path for the @Optional interface methods. Nothing is
+    // linked unless IC2 is actually installed, and the mod stays optional - see TileAccessPlug.
+    modCompileOnly "curse.maven:${propertyString('ic2_curse_file')}"
+
+    // JEI is *not* a dependency of ModularGrid, but MMCE's GUIs (blueprint preview, machine controller recipe slots)
+    // reference JEI renderer classes unconditionally, so opening any of them without JEI throws NoClassDefFoundError.
+    // The `dev` classifier jar is MCP named, which is what a development environment needs, and it lands in
+    // run/<side>/mods together with the other development jars.
+    runMods('mezz:jei:4.35.0:dev') { transitive = false }
+
+    // IC2 in the development runs, so the EU side of the access plug can be exercised in-game.
+    runMods("curse.maven:${propertyString('ic2_curse_file')}") { transitive = false }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Wireless energy networks
+    // ----------------------------------------------------------------------------------------------------------------
+    // Both are optional neighbours, and both are only referenced from com.modulargrid.common.integration.*, which is
+    // guarded by Loader.isModLoaded - the same model the IC2 support uses. They are compile only so their APIs are
+    // available under MCP names, and they are dropped into run/<side>/mods so the integrations can actually be
+    // exercised in the development client.
+    // Circulation Flow Networks is compile only for the same reason, but its development jar is *not* taken from
+    // CurseMaven: its own mixins are written against SRG names, which a development environment cannot resolve
+    // (FML's deobfuscating transformer only rewrites ordinary mod classes, and Mixin's refmap only covers the
+    // references a mod lists in its own refmap - CFN's @Shadow members are not in it).
+    // Unimined already produces an MCP named copy of the jar for the compile class path, and build.gradle copies
+    // that one into run/<side>/mods instead. See "Development only copy of Circulation Flow Networks" there.
+    modCompileOnly "curse.maven:${propertyString('fluxnetworks_curse_file')}"
+    modCompileOnly "curse.maven:${propertyString('circulation_networks_curse_file')}"
+
+    runMods("curse.maven:${propertyString('fluxnetworks_curse_file')}") { transitive = false }
 
     // Example - Dependency descriptor:
     // 'com.google.code.gson:gson:2.8.6' << group: com.google.code.gson, name:gson, version:2.8.6

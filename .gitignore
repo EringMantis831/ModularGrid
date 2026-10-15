@@ -23,3 +23,12 @@ build
 # other
 eclipse
 run
+
+# dev run logs that end up in the project root
+logs
+libs/dev
+
+# dev helper script used to launch the test client without a console window
+runclient.cmd
+# dev helper script used to launch the test server (logs to C:\tmp\srv.log)
+runserver.cmd

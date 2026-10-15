@@ -1,2 +1,74 @@
 # ModularGrid / 流通数据节点
 tile.modulargrid.access_plug.name=流通数据节点
+
+# 频道指令
+command.modulargrid.usage=用法：/modulargrid reg <频道名> [-p] [-e] | del <频道名> | list | set <频道名> <数值>
+command.modulargrid.usage.reg=用法：/modulargrid reg <频道名> [-p] [-e]
+command.modulargrid.usage.del=用法：/modulargrid del <频道名>
+command.modulargrid.usage.list=用法：/modulargrid list
+command.modulargrid.usage.set=用法：/modulargrid set <频道名|玩家名/频道名> <数值>
+command.modulargrid.unknownSub=未知的子命令：%s
+command.modulargrid.playerOnly=该指令只能由玩家执行
+command.modulargrid.reg.ok=已注册频道 %s（%s，%s）
+command.modulargrid.reg.invalid_name=频道名 %s 不合法：只能使用字母、数字、下划线、中文，长度 1~24
+command.modulargrid.reg.name_taken=你已经注册过名为 %s 的频道
+command.modulargrid.reg.name_firm=频道名 %s 已被整合包的固有频道占用，请换一个名字
+command.modulargrid.reg.limit_reached=%s 未注册：频道数量已达上限（%s 个）
+command.modulargrid.reg.energy_already_exists=%s 未注册：你已经有能量频道了
+command.modulargrid.reg.energy_not_allowed=你不能注册能量频道！
+command.modulargrid.reg.unavailable=频道数据不可用，请稍后重试
+command.modulargrid.reg.unknownFlag=未知的参数：%s
+command.modulargrid.type.energy=能量
+command.modulargrid.type.normal=普通
+command.modulargrid.visibility.public=公开
+command.modulargrid.visibility.firm=固有
+command.modulargrid.visibility.private=私有
+command.modulargrid.del.unknown=找不到名为 %s 的频道
+command.modulargrid.del.notOwner=频道 %s 属于 %s，只能删除自己注册的频道
+command.modulargrid.del.firm=频道 %s 是整合包定义的固有频道，无法删除
+command.modulargrid.del.ok=已删除频道 %s
+command.modulargrid.list.empty=你还没有注册任何频道
+command.modulargrid.list.header=你共有 %s 个频道：
+command.modulargrid.list.entry=- %s [%s / %s] 数值：%s
+command.modulargrid.set.noPermission=你没有修改频道数值的权限（需要管理员权限等级 2）
+command.modulargrid.set.invalidEnergy=%s 不是合法的整数：能量频道存的是 long（-9223372036854775808 ~ 9223372036854775807）
+command.modulargrid.set.invalidFloat=%s 不是合法的浮点数
+command.modulargrid.set.unknownOwner=找不到玩家 %s
+command.modulargrid.set.unknown=找不到频道 %s
+command.modulargrid.set.ok=频道 %s 的数值已设为 %s
+command.modulargrid.list.entry.energy=- %s [%s / %s] 储电量：%s RF
+command.modulargrid.set.ok.energy=频道 %s 的储电量已设为 %s RF
+
+# 接入点 GUI
+gui.modulargrid.access_plug.not_formed=机器未成形，无法接入频道
+gui.modulargrid.access_plug.no_channels=没有可接入的频道
+gui.modulargrid.access_plug.details=频道详情
+gui.modulargrid.access_plug.hint=左键点击列表中的频道可切换启用 / 停用
+gui.modulargrid.access_plug.row_meta=%s · %s
+gui.modulargrid.access_plug.row_meta_firm=%s · 固有
+gui.modulargrid.access_plug.owner_firm=固有频道（整合包提供）
+gui.modulargrid.access_plug.energy_value=储电量: %s RF
+gui.modulargrid.access_plug.value=数值: %s
+gui.modulargrid.access_plug.type=类型: %s
+gui.modulargrid.access_plug.visibility=可见性: %s
+gui.modulargrid.access_plug.owner=拥有者: %s
+gui.modulargrid.access_plug.state.enabled=状态: 已启用
+gui.modulargrid.access_plug.state.enabled.energy_source=状态: 已启用（本机正在使用）
+gui.modulargrid.access_plug.state.disabled=状态: 已停用
+
+# 提示
+message.modulargrid.notOwner=你不是这台机器的拥有者
+message.modulargrid.channelGone=该频道已被删除
+command.modulargrid.del.purged=已同步清理 %s 个接入点上的残留记录
+message.modulargrid.notFormed=接入点还不属于任何已成形的机器
+
+# Item tooltip
+tile.modulargrid.access_plug.tooltip.transfer=最大输入/传输 §6无限§7 FE/t
+tile.modulargrid.access_plug.tooltip.voltage=输出电压:§9LuV
+tile.modulargrid.access_plug.tooltip.circulation=§b可作为环流网络的有效节点
+tile.modulargrid.access_plug.tooltip.flux=§1可与FluxNetwork直接连接
+tile.modulargrid.access_plug.tooltip.open=打开以管理频道
+gui.modulargrid.access_plug.flux_network=通量网络：%s
+gui.modulargrid.access_plug.flux_none=未接入
+gui.modulargrid.access_plug.flux_hint=左键：下一网络 / 右键：上一网络
+message.modulargrid.fluxMissing=未安装通量网络（Flux Networks）
