@@ -16,16 +16,6 @@ import java.util.Collections;
 
 /**
  * Lets the access plug stand in for a Modular Machinery energy hatch.
- *
- * <p>A machine structure only accepts the exact blocks its JSON lists, and every pack lists the
- * energy hatch blocks there. Instead of asking pack authors to add the plug to every machine that
- * should be able to use channels, the plug is appended to the allowed blocks of every position that
- * accepts an energy hatch ({@link BlockEnergyHatch}). Since
- * {@link BlockArray.BlockInformation#addMatchingStates} also refreshes the sample list, blueprints
- * and JEI show the plug as an alternative right away.</p>
- *
- * <p>Called from {@code MachineRegistryMixin} while machines are registered or reloaded, which is
- * always before Modular Machinery rebuilds its rotated pattern cache.</p>
  */
 public final class EnergyHatchPatternCompat {
 

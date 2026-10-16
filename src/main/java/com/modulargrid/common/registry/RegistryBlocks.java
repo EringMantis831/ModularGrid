@@ -43,7 +43,7 @@ public class RegistryBlocks {
     }
 
     public static void registerBlocks() {
-        // 流通数据节点 / Data Flow Access Plug
+        // Data Flow Access Plug
         prepareItemBlockRegister(registerBlock(BlockAccessPlug.INSTANCE));
     }
 

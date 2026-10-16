@@ -11,8 +11,6 @@ import java.util.List;
 /**
  * Resolves the bracket syntax {@code <channel:channelId>} to the same value a bare channel id gives, for scripts that
  * prefer to be explicit about where a value comes from.
- * <p>The priority is the one CraftTweaker assumes for a handler without the annotation, it is only stated here to keep
- * the startup log quiet.</p>
  */
 @BracketHandler(priority = 10)
 final class CtChannelBracketHandler implements IBracketHandler {

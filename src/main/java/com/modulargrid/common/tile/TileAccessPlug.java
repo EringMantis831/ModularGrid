@@ -74,28 +74,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 流通数据节点 / Data Flow Access Plug tile.
- *
- * <p>The plug is the machine's connection point to the player's {@link Channel channels}. It joins
- * the multiblock as the energy hatch of the position it stands on - see {@link #componentsForSlot()} for what that
- * means exactly - and its storage <i>is</i> the owning player's energy channel, so a machine can run without any
- * physical energy hatch. It also keeps a per machine set of channels the owner switched off in its GUI.</p>
- *
- * <p>Binding to the controller is established by {@code TileMultiblockMachineControllerMixin}, see
- * {@link AccessPlugProvider}. The binding is validated lazily: as soon as the controller is gone or
- * its structure is broken the plug lets go of it, which also means "no channel IO while the machine
- * is not formed".</p>
- *
- * <p>The plug is also an energy hatch in its own right: it exposes Forge Energy
- * ({@link CapabilityEnergy#ENERGY}) on all six faces, so external cables and machines can push
- * energy into the channel and pull energy out of it, and it pushes energy into its neighbours every
- * tick like Modular Machinery's own output hatch does. When IndustrialCraft 2 is installed it
- * additionally joins IC2's energy net as both a sink and a source, so EU cables can do the same.</p>
- *
- * <p>With Flux Networks installed the plug is a storage connector of that mod as well, see
- * {@link AccessPlugFluxConnector}: the interface is declared here so the plug can be looked up as a
- * connector, its implementation lives in the integration package and is only loaded while the mod is
- * present.</p>
+ * Data Flow Access Plug tile.
  */
 @Optional.InterfaceList({
         @Optional.Interface(iface = "ic2.api.energy.tile.IEnergySink", modid = "ic2"),
@@ -155,9 +134,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * How many ticks pass between two activity reports of the same plug.
-     *
-     * <p>The report is only written while Modular Machinery asked the plug for energy during that window, so a plug
-     * no recipe touches stays quiet, see {@link #reportEnergyActivity()}.</p>
      */
     private static final int ACTIVITY_REPORT_INTERVAL = 100;
 
@@ -172,18 +148,13 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     /** EU per tick this plug moves, the same value Modular Machinery uses for its top hatch tier. */
     private static final double IC2_TRANSFER_LIMIT = 1 << ((IC2_TIER + 1) * 2 + 1);
 
-    /**
-     * Component standing in for the energy hatch the machine's pattern expects at this plug's position. It carries the
-     * general group id, exactly like Modular Machinery's own hatches, so it sits next to the machine's other
-     * components instead of replacing them, see {@link #componentsForSlot()}.
-     */
+    /** Stands in for the energy hatch the machine's pattern expects here, in the general group, see {@link #componentsForSlot()}. */
     private final MachineComponent<?> inputHatchComponent = new ChannelEnergyHatch(IOType.INPUT, -1L);
     private final MachineComponent<?> outputHatchComponent = new ChannelEnergyHatch(IOType.OUTPUT, -1L);
 
     /**
-     * Both channel energy ports, handed to a machine that has no energy hatch of its own at all. They are built once
-     * and cached: Modular Machinery keys its component map by tile entity, so two components of the same tile need a
-     * distinct, <b>stable</b> group id or they would overwrite each other on every structure rebuild.
+     * Both channel energy ports, for a machine without an energy hatch of its own. Two components of one tile need a
+     * distinct, stable group id, Modular Machinery keys its component map by tile entity.
      */
     private final List<MachineComponent<?>> bothEnergyComponents;
 
@@ -292,15 +263,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * The components this plug hands to the machine it stands in.
-     *
-     * <p>Modular Machinery collects the components of a tile entity with a non-negative group id into
-     * {@code foundComponents} and, as soon as that map holds anything at all, keeps the machine's general components -
-     * every native hatch and bus, group id {@code -1} - out of the recipe context. A combination component is expected
-     * to cover the whole machine, so handing in two grouped components makes the machine blind to its own hatches: a
-     * native energy hatch stops taking power and a recipe that needs items can never start.</p>
-     *
-     * <p>The plug therefore behaves like the hatch it replaces rather than like a combination that covers
-     * everything:</p>
      *
      * <ul>
      *     <li>it stands in for the energy hatch the machine's pattern expects at its position, in the general group,
@@ -708,14 +670,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * Resolves the channel the machine draws from and stores into.
-     *
-     * <p>The pack's energy channels come first - the per player instance of a private one, then the shared ones in
-     * configuration order - and while the pack declares one, the channels players registered themselves do not exist
-     * any more (see {@code ChannelRegistry#prunePlayerEnergyChannels}). Without firm energy channels the order stays
-     * what it was: the machine owner's own channel, then the public channels of other players. The pack's channels are cheap map lookups and are checked every tick; the other
-     * players' ones are only searched every {@link #CHANNEL_RESCAN_INTERVAL} ticks, so a server full of machines does not
-     * rescan the whole channel map every tick. While the plug is not bound to a formed machine the placer's channels are
-     * used, see {@link #getChannelOwner()}.</p>
      */
     private void refreshEnergyChannel() {
         UUID owner = getChannelOwner();
@@ -843,10 +797,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * Switches a channel on or off for this machine.
-     *
-     * <p>Which set records the state depends on who owns the channel: an own channel is on by default and is listed
-     * while off, a foreign one is off by default and is listed while on. The other set never keeps the same address,
-     * so a channel cannot end up described by both.</p>
      *
      * @return {@code true} if the state changed, in which case the change was persisted
      */
@@ -1138,20 +1088,12 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     /**
      * Enforces "all energy IO happens on the channel".
      *
-     * <p>Modular Machinery picks its energy handler by iterating the components of the recipe context in an
-     * order we cannot control, so leaving the physical hatches alone would make an ordinary hatch win over
-     * the channel. Instead the plug keeps those hatches in a state that makes the channel the only real
-     * source and sink:</p>
-     *
      * <ul>
      *     <li>input hatches are topped up from the channel until they are full, so an external cable has no
      *         room left to push energy in and whatever the machine consumes effectively comes from the channel,</li>
      *     <li>output hatches are emptied into the channel every tick, so an external cable has nothing to pull
      *         and the surplus ends up in the channel as well.</li>
      * </ul>
-     *
-     * <p>Refilling to the brim (instead of trickling in the recipe's rate) also hides the race against the
-     * asynchronous recipe thread: the hatch is always full enough to satisfy a whole tick of consumption.</p>
      */
     private void manageEnergyHatches() {
         TileMultiblockMachineController machine = controller;
@@ -1187,7 +1129,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         }
     }
 
-    /** Remembers the moves already reported at debug level, see {@link #MOVE_LOG_INTERVAL}. */
+    /** Moves already reported at debug level, see {@link #MOVE_LOG_INTERVAL}. */
     private int hatchMoveCount;
     private int machineEnergyMoveCount;
 
@@ -1266,11 +1208,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         return true;
     }
 
-    /**
-     * Reports energy moved between the channel and one of the machine's own hatches, throttled by
-     * {@link #MOVE_LOG_INTERVAL}. This is the "energy that goes around the plug" case, and a pack whose machine
-     * feeds a plain hatch instead of the plug is exactly what these lines make visible.
-     */
+    /** Reports energy moved between the channel and one of the machine's own hatches, see {@link #MOVE_LOG_INTERVAL}. */
     private void logHatchMove(String what, long amount, IEnergyHandler hatch) {
         int count = ++hatchMoveCount;
         if (count != 1 && count % MOVE_LOG_INTERVAL != 0) {
@@ -1280,10 +1218,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
                 hatch.getClass().getSimpleName());
     }
 
-    /**
-     * Reports energy a machine put into the channel through the plug's own energy component, throttled by
-     * {@link #MOVE_LOG_INTERVAL}. A machine that generates energy reports here, a machine that consumes it does not.
-     */
+    /** Reports energy a machine put into the channel through the plug's own component, see {@link #MOVE_LOG_INTERVAL}. */
     private void logMachineEnergy(long amount) {
         int count = ++machineEnergyMoveCount;
         if (count != 1 && count % MOVE_LOG_INTERVAL != 0) {
@@ -1293,16 +1228,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
                 getPos(), amount, count);
     }
 
-    /**
-     * Reports the first few interactions between Modular Machinery's energy requirement and this plug at debug level.
-     *
-     * <p>"The machine generates, the channel stays empty" has two very different causes: the requirement never gets as
-     * far as this storage, or it does and the energy ends up somewhere else. These lines tell the two apart without
-     * guessing: {@code room} and {@code current} are the two questions a requirement asks before it moves anything,
-     * {@code insert} and {@code extract} are the moves themselves - with the exact amount it asked for, {@code 0}
-     * included - and {@code refused} means the plug had no channel at that moment. The amounts are sampled once per
-     * kind, so a long run is summarised by {@link #reportEnergyActivity()} instead.</p>
-     */
+    /** Traces the first few questions of a machine's energy requirement, with the amount it asked for. */
     private void traceHandlerCall(String what, long amount) {
         int slot = traceSlot(what);
         if (slot < 0) {
@@ -1337,12 +1263,8 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     }
 
     /**
-     * Reports what Modular Machinery asked this plug for, once every {@link #ACTIVITY_REPORT_INTERVAL} ticks while it
-     * asked for anything at all, at debug level.
-     *
-     * <p>A report naming the recipe and its progress, the energy the machine handed over and the channel's value is
-     * what separates "the machine is not running", "the machine runs but asks the plug for nothing" and "the machine
-     * runs and the plug silently drops it".</p>
+     * Reports what the machine asked the plug for while it asked at all, see {@link #ACTIVITY_REPORT_INTERVAL}: the
+     * recipe and its progress, the moved amounts and the channel value.
      */
     private void reportEnergyActivity() {
         long now = getWorld().getTotalWorldTime();
@@ -1365,10 +1287,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
                 channel == null ? "<none>" : channel.getAddress(), getStoredEnergy());
     }
 
-    /**
-     * @return the owning machine as one short phrase for {@link #reportEnergyActivity()}: whether the plug is bound at
-     *         all, whether the structure is still there and which recipe the machine is running
-     */
+    /** @return the owning machine as one short phrase for {@link #reportEnergyActivity()} */
     private String describeMachineActivity() {
         TileMultiblockMachineController machine = controller;
         if (machine == null) {
@@ -1404,11 +1323,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * Pushes channel energy into the neighbours' Forge Energy handlers.
-     *
-     * <p>Modular Machinery's own input hatches do not pull, they rely on something pushing into them, so
-     * the plug has to push just like an output hatch does - that is what makes "two machines, no cables"
-     * work. Identical to those hatches it offers one {@code int} clamped amount per face and tick, and it
-     * skips energy hatches and other access plugs so hatches never feed each other in a loop.</p>
      */
     private void pushEnergyToNeighbors() {
         World world = getWorld();
@@ -1491,14 +1405,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     /**
      * Keeps the modifiers of the controller in step with the channels this machine may use.
-     *
-     * <p>A channel gives its modifiers while the plug is part of a formed machine, the channel is not switched off for
-     * that machine, and the channel is declared for it. A shared channel is therefore switched on explicitly, the same
-     * rule the energy side follows, and a restricted channel only reaches its machines.</p>
-     *
-     * <p>The set is rebuilt whenever anything could have changed and compared, so the controller is only touched when
-     * it really differs. The modifiers are registered under a name of ours, which is what makes removing exactly them
-     * again possible.</p>
      */
     private void applyChannelModifiers() {
         TileMultiblockMachineController machine = controller;
@@ -1764,10 +1670,6 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     /**
      * The storage of the plug's energy components: it maps Modular Machinery's energy API straight
      * onto the player's energy channel, which is an unbounded {@code long} pool.
-     *
-     * <p>While no channel is available (no controller, no channel, channel switched off) the handler
-     * reports zero stored energy and zero capacity, so the machine behaves as if the plug was not
-     * there at all - it neither receives power from the grid nor pushes power into it.</p>
      */
     private final class ChannelEnergyHandler implements IEnergyHandlerAsync {
 

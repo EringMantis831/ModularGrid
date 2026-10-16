@@ -18,16 +18,6 @@ import java.util.Map;
 
 /**
  * Binds {@link AccessPlugProvider} components to the controller that discovered them.
- *
- * <p>{@code TileMultiblockMachineController#addComponent} is the single point where every
- * structure component is registered, so injecting at its tail covers both the initial
- * structure build and every rebuild. MMCE itself does the same kind of type check for its
- * upgrade bus and smart interface, it just has no generic hook for addons.</p>
- *
- * <p>That tail runs while the components of a position are added, which is too late for a plug that has to decide
- * <i>what</i> to add: {@code updateComponents} asks every tile for its components first. The head of
- * {@code updateComponents} therefore binds every plug of the structure before that decision is made, so a plug always
- * knows the machine it is standing in.</p>
  */
 @Mixin(value = TileMultiblockMachineController.class, remap = false)
 public class TileMultiblockMachineControllerMixin {

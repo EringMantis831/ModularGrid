@@ -2,9 +2,6 @@ package com.modulargrid.common.channel;
 
 /**
  * The three ways a script can change a channel, used by the {@code addDataConfig} recipe method.
- *
- * <p>The numbers are the ones Modular Machinery uses for {@code RecipeModifier} operations, so a pack author who already
- * writes modifiers needs no second mental model.</p>
  */
 public final class ChannelOps {
 

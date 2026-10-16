@@ -6,10 +6,6 @@ import java.math.RoundingMode;
 /**
  * Formats channel values for display.
  *
- * <p>A channel is unbounded ({@link com.modulargrid.common.channel.Channel}), so a value can grow into a number whose
- * digits no longer fit into a GUI row - the unit behind it would be pushed out of the row first, which is why the row
- * is shortened early. Two forms are offered:</p>
- *
  * <ul>
  *     <li>{@link #display(long)} / {@link #display(float)}: the compact form used in a channel row. Values of more
  *         than {@link #MAX_PLAIN_DIGITS} digits become {@code N.NNeNN} with two decimals in the mantissa, which keeps

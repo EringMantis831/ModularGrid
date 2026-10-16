@@ -16,13 +16,6 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 /**
  * Switches one channel on or off for one access plug.
- *
- * <p>The message handles itself (message and handler in one class), which is the same shape the Flux
- * Networks addons use and halves the boilerplate of a plain Forge message pair. Forge runs the handler
- * on the server thread, so no explicit scheduling is needed.</p>
- *
- * <p>The server answers with the plug's regular tile entity update packet, so the client never has to
- * guess the resulting state.</p>
  */
 public class PktChannelToggle implements IMessage, IMessageHandler<PktChannelToggle, IMessage> {
 

@@ -9,15 +9,6 @@ import sonar.fluxnetworks.api.utils.NBTType;
 
 /**
  * Bridges one of Flux Networks' transfer cycles to the plug's channel.
- *
- * <p>Flux Networks calls this handler once per cycle to move energy between a connector and its network: a storage is
- * charged through {@link #addToBuffer(long)} and discharged through {@link #removeFromBuffer(long)}. Both directions
- * are the channel itself here, so the plug holds no buffer of its own that could drift away from the pool.</p>
- *
- * <p>The amounts reported to the network ({@link #getRequest()}, {@link #getBuffer()}, {@link #getChange()}) belong to
- * this plug only. Several plugs may share one channel, and reporting the pool in each of them would make the network
- * count the same energy twice, so the change is tracked as "what this connector moved" (the way Flux Networks' own
- * storage handler does it) instead of "how much the pool grew".</p>
  */
 public class AccessPlugFluxTransfer implements ITransferHandler {
 

@@ -9,10 +9,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Makes the machine whose tick is running visible to script code, see {@link ChannelScriptContext}.
- *
- * <p>{@code doRestrictedTick} is declared {@code final} on the controller base class, so it is the one place every
- * controller goes through, and Modular Machinery fires its machine and recipe events synchronously from inside it - a
- * script handler always runs while its own machine is the innermost one on the stack.</p>
  */
 @Mixin(value = TileMultiblockMachineController.class, remap = false)
 public class MachineScriptContextMixin {

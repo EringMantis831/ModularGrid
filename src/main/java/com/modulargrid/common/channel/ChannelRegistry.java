@@ -17,9 +17,6 @@ import java.util.function.Predicate;
 
 /**
  * Static access point to the global {@link Channel} store.
- *
- * <p>All mutating methods are meant to be called from the server thread. Client side
- * reads return {@code null}, channel data reaches the client through GUI sync instead.</p>
  */
 public final class ChannelRegistry {
 
@@ -205,8 +202,6 @@ public final class ChannelRegistry {
     /**
      * Looks for a channel with that name owned by somebody, used to tell "unknown channel"
      * and "that one is not yours" apart in command feedback.
-     *
-     * <p>Firm channels are skipped: they belong to nobody, so "not yours" would be the wrong answer for them.</p>
      */
     public static Channel findAny(World world, String name) {
         ChannelWorldData data = getData(world);
@@ -227,8 +222,6 @@ public final class ChannelRegistry {
 
     /**
      * Looks a channel up by its {@code ownerUUID/name} address.
-     *
-     * <p>Channel names cannot contain a slash, so the first slash always separates owner and name.</p>
      *
      * @return the channel, {@code null} if the address is malformed or the channel is gone
      */
@@ -293,9 +286,6 @@ public final class ChannelRegistry {
      * @return every channel {@code viewer} may connect to, in the order the access plug shows them: their own
      *         channels, the pack's per player channels for them, the pack's shared channels in configuration order, and
      *         finally the public channels of other players.
-     *
-     * <p>Firm channels are created on first listing, which is what makes a declared channel the player has never used
-     * show up with a value of zero instead of being missing.</p>
      */
     public static List<Channel> listAccessible(World world, UUID viewer) {
         ChannelWorldData data = getData(world);
@@ -330,10 +320,6 @@ public final class ChannelRegistry {
      * Resolves the pack's energy channels for one player: the per player instance of a private declaration first, then
      * the shared ones in configuration order.
      *
-     * <p>A firm channel outranks a channel the player registered themselves, which is the point of a pack declaring one:
-     * the pack decides where the energy of its machines lands. A player who would rather use their own channel switches
-     * the firm one off in the access plug's GUI.</p>
-     *
      * @param accepted additional filter, the access plug passes its own enable state here
      */
     @Nullable
@@ -359,9 +345,6 @@ public final class ChannelRegistry {
 
     /**
      * Resolves the shared energy channel of <b>another player</b> a machine may draw from, lowest owner UUID first.
-     *
-     * <p>Firm channels are not looked at here, they come before the machine owner's own channel, see
-     * {@link #findFirmEnergyChannelFor(World, UUID, Predicate)}.</p>
      *
      * @param accepted additional filter, the access plug passes its own enable state here
      */
@@ -504,9 +487,6 @@ public final class ChannelRegistry {
      * Drops the values of firm channels the configuration no longer declares, and of those whose sharing mode or type
      * has changed. Runs after the configuration was read, so a save never keeps a value nothing can reach any more.
      *
-     * <p>Only definition <i>references</i> are cleaned up here: a value whose channel is still declared is kept, which
-     * is what makes editing the configuration safe.</p>
-     *
      * @return the amount of values that were dropped
      */
     public static int pruneFirmChannels(World world) {
@@ -569,9 +549,6 @@ public final class ChannelRegistry {
      * Drops the energy channels players registered themselves. A pack that declares firm energy channels decides where
      * the energy of its machines lands, so a channel somebody set up before that has no place any more - and neither has
      * a resolution order that would silently keep using it.
-     *
-     * <p>Their values are lost on purpose: the channels are gone, and only the pools the pack built remain. Runs with
-     * the configuration, so a save is brought in line on server start and on every reload.</p>
      *
      * @return the amount of energy channels that were removed
      */

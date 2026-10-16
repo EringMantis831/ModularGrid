@@ -16,10 +16,6 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * ModularGrid - a Modular Machinery: Community Edition addon.
- *
- * <p>Blocks/items live in {@code com.modulargrid.common}, registration is event driven,
- * see {@link com.modulargrid.common.registry.RegistryBlocks} and
- * {@link com.modulargrid.common.registry.RegistryItems}.</p>
  */
 @Mod(modid = ModularGrid.MOD_ID,
         name = ModularGrid.MOD_NAME,

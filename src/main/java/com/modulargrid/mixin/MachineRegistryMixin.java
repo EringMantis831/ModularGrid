@@ -16,12 +16,6 @@ import java.util.Collection;
 /**
  * Extends every loaded machine with the access plug wherever it accepts an energy hatch, see
  * {@link EnergyHatchPatternCompat}.
- *
- * <p>These two methods are the only places machines enter the registry: the initial load during
- * Modular Machinery's postInit and every reload triggered by a CraftTweaker reload. Both run before
- * Modular Machinery rebuilds its rotated pattern cache, so the plug ends up in the cache as well
- * and no machine data has to be patched afterwards. {@code loadMachines} additionally rereads the firm channel
- * configuration, so {@code /modularmachinery reload} covers both.</p>
  */
 @Mixin(value = MachineRegistry.class, remap = false)
 public class MachineRegistryMixin {

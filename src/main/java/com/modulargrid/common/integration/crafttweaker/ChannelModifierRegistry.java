@@ -16,15 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The recipe modifiers firm channels provide, as declared by scripts through {@code ChannelModifierBuilder}.
- *
- * <p>A declaration is not bound to a machine: it says "while this channel is enabled for a machine, that machine gets
- * these modifiers". Static declarations are kept on the controller by the access plug; sampled declarations are copied
- * into a recipe's context once when its start event fires.</p>
- *
- * <p>Declaring the same modifier twice changes nothing. CraftTweaker compiles every script again on a reload, and the
- * builders run again then, so a declaration has to be idempotent instead of being collected in a list that is cleared
- * somewhere. Two declarations that only differ in a value are two modifiers, which is what makes editing a declaration
- * take effect after a restart.</p>
  */
 public final class ChannelModifierRegistry {
 

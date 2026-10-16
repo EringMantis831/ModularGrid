@@ -13,7 +13,7 @@
 ### Added
 - Cleanroom Loader 0.6.0 based 1.12.2 mod development workspace on Java 25
 - Modular Machinery: Community Edition addon setup (MMCE 2.3.2 + CraftTweaker)
-- `access_plug` block: 流通数据节点 / Data Flow Access Plug, built as casing + overlay model like the other MMCE machine components
+- `access_plug` block: Data Flow Access Plug, built as casing + overlay model like the other MMCE machine components
 - The access plug is a general energy hatch in its own right: Forge Energy on all six faces (push in / pull out) plus an
   active push into its neighbours every tick, so machines can share a channel without cables
 - Any position that accepts a Modular Machinery energy hatch also accepts the access plug, so machine JSONs do not
@@ -75,4 +75,7 @@
 - Added a one line report of how a plug joined its machine, plus debug level diagnostics for "the machine generates
   but the channel stays empty": the first asked/inserted/extracted amounts, and a per 5 seconds summary naming the
   machine's recipe and progress, the asked/inserted/extracted totals and the channel's value
+- Packaged artifacts are named `ModularGrid-1.12.2-cleanroom-1.0.0.jar` (release), `-dev.jar` (development instance
+  only) and `-source.jar`; the mod logo ships inside the jar and an English README is available next to the Chinese one
+- Comments across the sources were cut down to the parts that explain why something is the way it is
 - This is a default template changelog that follows the [KeepAChangelog Convention](https://keepachangelog.com/en/1.1.0/)

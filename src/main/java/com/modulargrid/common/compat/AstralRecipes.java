@@ -7,24 +7,6 @@ import java.lang.reflect.Method;
 
 /**
  * Astral Sorcery's infusion recipe arrays, reached reflectively.
- *
- * <p>Astral Sorcery keeps two lists while its recipes are being registered and only folds them into the arrays its
- * own {@code InfusionRecipeRegistry#getRecipe(int)} reads during {@code CommonProxy#postInit}. Nova Engineering Core's
- * starlight infuser adapter reads those arrays, but Modular Machinery generates adapter recipes from <em>its</em>
- * {@code postInit}, which may run before Astral Sorcery's - that is what makes the adapter throw a
- * {@code NullPointerException} on {@code compiledRecipes}.</p>
- *
- * <p>Both lists are final by then: every mod's {@code init} has already run, and Astral Sorcery itself uses
- * {@code CraftingAccessManager#hasCompletedSetup()} as the "arrays exist" flag. Compiling early therefore only moves
- * work that Astral Sorcery would do a few moments later in its own {@code postInit} (which rebuilds the same arrays
- * from the same lists), so the adapter can keep its original behaviour instead of being skipped.</p>
- *
- * <p>Nothing here is linked at compile time; the classes are looked up by name so ModularGrid keeps working - and the
- * mixin stays inert - when either mod is absent.</p>
- *
- * <p>Public and outside {@code com.modulargrid.mixin} on purpose: this class is called from
- * {@code NovaEngStarlightAdapterMixin}, whose body Mixin copies into Nova Engineering Core's adapter - and Mixin
- * refuses any direct reference to classes of a declared mixin package.</p>
  */
 public final class AstralRecipes {
 

@@ -32,11 +32,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * 流通数据节点 / Data Flow Access Plug.
- *
- * <p>A Modular Machinery machine component, usable in machine structures. It is also usable
- * wherever a structure accepts an energy hatch, and it exposes Forge Energy itself, see
- * {@link TileAccessPlug}.</p>
+ * Data Flow Access Plug.
  */
 public class BlockAccessPlug extends BlockMachineComponent {
 

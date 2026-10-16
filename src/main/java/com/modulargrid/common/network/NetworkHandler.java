@@ -8,9 +8,6 @@ import net.minecraftforge.fml.relauncher.Side;
 
 /**
  * ModularGrid's network channel.
- *
- * <p>Only client to server messages live here: everything the client has to display is sent by the tile
- * entity update packets of the access plug, so there is no server to client message at all.</p>
  */
 public final class NetworkHandler {
 

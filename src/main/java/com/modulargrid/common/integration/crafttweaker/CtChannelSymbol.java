@@ -15,20 +15,6 @@ import stanhebben.zenscript.util.ZenPosition;
 /**
  * Makes a bare {@code <channelId>} usable inside a script, so a channel reads like a property:
  * {@code Temp.amount}.
- *
- * <p>ZenScript resolves an unknown identifier through the global symbol table, and a symbol only has to answer with a
- * partial expression. This one answers with a call to {@link CtChannels#valueOf(String)} carrying the channel id, so
- * the compiled script asks the mod for the channel at the moment the expression runs instead of baking a value in at
- * compile time.</p>
- *
- * <p>The name is registered once per channel (the global table rejects duplicates with
- * {@code IllegalArgumentException}), which is why the symbol looks the channel up lazily: adding a channel to the
- * configuration after a script reload only needs a new symbol, not a new symbol for every existing one.</p>
- *
- * <p>An energy channel compiles into a call to {@code CtChannels.valueOfEnergy}, a data channel into
- * {@code CtChannels.valueOf}: the two return different classes because {@code amount} is a {@code long} for stored
- * energy and a {@code float} for everything else. Which one applies is decided while the script is compiled, from the
- * channel's declaration in the pack configuration.</p>
  */
 final class CtChannelSymbol implements IZenSymbol {
 

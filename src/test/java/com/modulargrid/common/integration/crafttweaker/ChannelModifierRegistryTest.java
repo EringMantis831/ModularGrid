@@ -14,9 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The rule that decides whether a channel provides its modifiers: declared, switched on for the machine, and declared
  * for that machine.
- *
- * <p>The access plug follows exactly this rule, and getting it wrong is not visible in a log - it is visible as a
- * machine that is silently faster or slower than the pack intended.</p>
  */
 class ChannelModifierRegistryTest {
 

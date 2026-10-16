@@ -6,15 +6,6 @@ import java.lang.reflect.Field;
 
 /**
  * Field access for the CodeChickenLib compatibility patch, done the way modern Java requires.
- *
- * <p>Java 17+ does two things that break the reflection patterns CodeChickenLib was written against:
- * it removed {@code Field.modifiers}, and it refuses to build a reflective accessor for a
- * {@code static final} field - even for a plain <b>read</b>, because creating the override accessor
- * tries to create a setter as well and the setter is rejected. {@code Unsafe} has neither
- * restriction, which is why every modern mod loader uses it for exactly this.</p>
- *
- * <p>{@code Unsafe} is fetched reflectively: calling {@code Unsafe.getUnsafe()} directly throws for
- * any caller outside the JDK.</p>
  */
 public final class FieldModifiers {
 

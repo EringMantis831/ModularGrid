@@ -13,9 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The isolation Modular Machinery's adapter loading gets: a broken adapter is skipped, not fatal.
- *
- * <p>A {@code MachineRecipe} cannot be built outside a bootstrapped game, so the pass-through case checks that the very
- * same list instance comes back instead of comparing recipe contents.</p>
  */
 class AdapterFailuresTest {
 

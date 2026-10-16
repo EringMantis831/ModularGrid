@@ -14,9 +14,6 @@ import java.lang.reflect.Field;
 /**
  * Makes CodeChickenLib's reflection helper work on modern Java.
  *
- * <p>Two separate problems, both fatal while loading anything that uses CodeChickenLib (Thermal
- * Expansion, for example):</p>
- *
  * <ol>
  *     <li>{@code ReflectionManager.removeFinal} clears the {@code final} modifier by writing the
  *     {@code Field.modifiers} field. Java 12+ filtered that field and Java 17 removed it, so the
@@ -32,8 +29,6 @@ import java.lang.reflect.Field;
  *     {@link #modulargrid$writeViaUnsafe} route both reflective reads and writes through
  *     {@code Unsafe}, which has no such restriction.</li>
  * </ol>
- *
- * <p>Everything else in the class - name lookups, ordinary reads - is left alone.</p>
  */
 @Mixin(value = ReflectionManager.class, remap = false)
 public class CodeChickenLibReflectionMixin {

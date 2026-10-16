@@ -23,15 +23,6 @@ import java.util.Map;
 
 /**
  * Reads the firm channel definitions from {@code config/modulargrid/firm_channel.json}.
- *
- * <p>The configuration holds <b>definitions only</b>; the values live in the channel store like every other channel's
- * value (see {@link ChannelWorldData}), so editing this file never touches a save and deleting an entry simply drops
- * that channel's value.</p>
- *
- * <p>Keys are camelCase: {@code allowPlayerEnergyChannels}, and per channel {@code channelId},
- * {@code channelLocalization}, {@code isPublic}, {@code isEnergy}, {@code masterTo}. Parsing is defensive per entry - a
- * malformed channel is reported and skipped instead of discarding the whole file - and the result is a plain value
- * object, so it can be unit tested without touching the file system (see {@link #parse(String)}).</p>
  */
 public final class FirmChannelConfig {
 

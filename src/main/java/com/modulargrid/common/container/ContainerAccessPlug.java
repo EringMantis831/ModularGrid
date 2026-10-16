@@ -7,10 +7,6 @@ import net.minecraft.inventory.Slot;
 
 /**
  * Container of the access plug GUI.
- *
- * <p>The player inventory is placed where {@code guifactory.png} draws its inventory panel: the
- * background texture of Modular Machinery's factory controller is reused, and its slot grid sits at
- * these offsets instead of the default ones.</p>
  */
 public class ContainerAccessPlug extends ContainerBase<TileAccessPlug> {
 

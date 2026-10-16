@@ -27,8 +27,6 @@ import java.util.UUID;
  *     .addDataConfig("temp", 500, 0, "input", false)
  * </pre>
  *
- * <p>The method only registers one of Modular Machinery's own handlers, so the timing is Modular Machinery's:</p>
- *
  * <table>
  *     <caption>Where the write lands</caption>
  *     <tr><th>ioType</th><th>isPerTick</th><th>handler</th><th>when</th></tr>
@@ -39,9 +37,6 @@ import java.util.UUID;
  *     <tr><td>any</td><td>{@code true}</td><td>{@code addPreTickHandler}</td><td>every tick, before the recipe
  *         progresses</td></tr>
  * </table>
- *
- * <p>A per player channel is written on the instance of the machine running the recipe, the same rule scripts read
- * with, and a running recipe never fails because of a write: the target is simply the machine's own channel.</p>
  */
 @ZenRegister
 @ZenExpansion("mods.modularmachinery.RecipePrimer")
@@ -55,10 +50,6 @@ public final class CtRecipePrimer {
 
     /**
      * Adds a channel write to a recipe.
-     *
-     * <p>The four numeric overloads exist because ZenScript matches a parameter type exactly: {@code 500} is an
-     * {@code int}, {@code 2.5} a {@code double}, and neither of them is converted into the other. They all end up in the
-     * same implementation, and the channel's own type decides how the value is stored.</p>
      *
      * @param channelId the firm channel to write, as declared by the pack
      * @param amount the operand, see {@code operation}
@@ -122,9 +113,6 @@ public final class CtRecipePrimer {
 
     /**
      * Writes the channel of the machine the recipe belongs to.
-     *
-     * <p>The channel comes from the configuration again instead of from the registration: a reload may have dropped
-     * it, and a write into a channel nothing declares would go nowhere.</p>
      */
     private static void write(RecipeEvent event, String channelId, double amount, int operation) {
         FirmChannelDefinition definition = FirmChannelConfig.find(channelId);

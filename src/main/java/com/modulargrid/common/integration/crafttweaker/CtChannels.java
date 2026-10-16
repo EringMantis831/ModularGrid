@@ -20,14 +20,6 @@ import java.util.UUID;
 /**
  * Makes firm channels readable from scripts: {@code Temp.amount} for a bare channel id and {@code <channel:Temp>.amount}
  * for scripts that prefer the bracket syntax.
- *
- * <p>Only the channel id ever reaches a script - no owner UUID, no address - which is why only firm channels, the ones
- * a pack declares and names, are exposed. A player channel is addressed by its owner internally and stays out of
- * scripts.</p>
- *
- * <p>Resolution happens when the script runs, not when it is compiled, so a value that changes during a recipe is seen.
- * The instance a per player channel resolves to is the one of the machine currently ticking, see
- * {@link ChannelScriptContext}.</p>
  */
 public final class CtChannels {
 
@@ -46,8 +38,6 @@ public final class CtChannels {
 
     /**
      * Value a script sees for a data channel.
-     *
-     * <p>Called by compiled {@code <channelId>.amount} expressions, see {@link CtChannelSymbol}.</p>
      */
     public static CtChannelValue valueOf(String channelId) {
         return new CtChannelValue(channelId);
@@ -78,11 +68,6 @@ public final class CtChannels {
 
     /**
      * Resolves the channel instance a script currently addresses.
-     *
-     * <p>A shared channel is the same instance for everyone. A per player channel is the instance of the machine whose
-     * tick is running; without a machine (a script outside machine logic, or the server side of a client connected to a
-     * multiplayer server) there is nothing to read and the answer is {@code null}, which every caller turns into a
-     * zero.</p>
      *
      * @return the channel, {@code null} when the id is not declared or cannot be resolved here
      */
@@ -147,9 +132,6 @@ public final class CtChannels {
 
     /**
      * Registers one channel id as a script global.
-     *
-     * <p>CraftTweaker's global table rejects a duplicate name with an exception, so registering is done once per id and
-     * a channel that appears in the configuration later simply gets its symbol then.</p>
      */
     private static void register(String channelId) {
         if (!REGISTERED_IDS.add(channelId)) {

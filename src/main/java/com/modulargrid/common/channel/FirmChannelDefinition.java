@@ -12,19 +12,12 @@ import java.util.regex.Pattern;
 /**
  * A channel a modpack author declares in {@code config/modulargrid/firm_channel.json}.
  *
- * <p>A firm channel belongs to nobody: it is not registered by a player, it cannot be deleted, and its value lives in
- * the same channel store as every other channel (see {@link FirmChannelConfig} for the definition/value split). Three
- * kinds exist:</p>
- *
  * <ul>
  *     <li>a <b>public</b> data channel - one shared pool, every machine allowed to use it may read and write it,</li>
  *     <li>a <b>per player</b> data channel ({@code isPublic: false}) - every player gets their own instance,</li>
  *     <li>an <b>energy</b> channel - either one shared pool or, when {@code isPublic: false}, the energy channel of
  *         every single player, which occupies that player's one energy channel slot.</li>
  * </ul>
- *
- * <p>{@link #masterTo} restricts which machines may use a <b>data</b> channel. Energy channels ignore it: an energy
- * pool is the machine's power supply, not a machine specific switch, and the per player rule already scopes it.</p>
  */
 public final class FirmChannelDefinition {
 

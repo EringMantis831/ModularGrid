@@ -18,9 +18,6 @@ import javax.annotation.Nullable;
 
 /**
  * Common (server + client) side proxy.
- *
- * <p>Also the mod's {@link IGuiHandler}: the client side element is created by
- * {@link com.modulargrid.client.ClientProxy}, which overrides that method.</p>
  */
 public class CommonProxy implements IGuiHandler {
 

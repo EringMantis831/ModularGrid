@@ -11,20 +11,6 @@ import java.util.regex.Pattern;
 
 /**
  * A ModularGrid channel: a named, globally persisted slot owned by a player.
- *
- * <p>Channels are addressed internally as {@code ownerUUID/name} and are stored in
- * {@link ChannelWorldData}, so their contents are global (cross dimension).</p>
- *
- * <p>The stored value depends on the channel type and is never routed through {@code double}:
- * an <b>energy</b> channel holds a {@code long} (exact for the whole {@code long} range, which is
- * also what Modular Machinery uses for RF internally, {@code 1 RF == 1}), every other channel holds
- * a {@code float}. Parsing, persistence and display all use the same type, so the only precision
- * limit is the one inherent to the type itself.</p>
- *
- * <p>The energy pool is an {@link AtomicLong} because Modular Machinery may read and write it from
- * its recipe thread: {@link #takeEnergy} and {@link #giveEnergy} are atomic, and adding saturates
- * at {@link Long#MAX_VALUE} instead of overflowing. The {@code float} of a data channel is volatile
- * for the same reason, and its read-modify-write operations are synchronized.</p>
  */
 public class Channel {
 
@@ -275,9 +261,6 @@ public class Channel {
     /**
      * Reads a channel back from its persisted form. The name and owner are part of the
      * storage layout, so they are passed in instead of being stored in the tag.
-     *
-     * <p>Values written by older versions as {@code double} are read through NBT's numeric
-     * coercion, so no migration is needed.</p>
      */
     public static Channel readFromNBT(String name, UUID owner, NBTTagCompound tag) {
         Channel channel = new Channel(name, owner, tag.getString(NBT_OWNER_NAME),

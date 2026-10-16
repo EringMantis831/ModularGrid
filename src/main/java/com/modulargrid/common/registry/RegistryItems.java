@@ -17,9 +17,6 @@ import java.util.Objects;
 
 /**
  * Item registration, wired to the forge registry events.
- *
- * <p>{@link RegistryBlocks} primes the item blocks, standalone items are added to
- * {@link #ITEMS_TO_REGISTER} directly from {@link #registerItems()}.</p>
  */
 public class RegistryItems {
 

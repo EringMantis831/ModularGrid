@@ -9,11 +9,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Global persistence for all {@link Channel channels}.
- *
- * <p>Stored in the overworld's {@code MapStorage}, which makes the data global: it is
- * shared by every dimension of a save and survives restarts.</p>
- *
- * <p>Layout: {@code { <owner uuid>: { <channel name>: <channel data> } }}</p>
  */
 public class ChannelWorldData extends WorldSavedData {
 

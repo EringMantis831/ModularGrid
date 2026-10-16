@@ -22,15 +22,6 @@ import java.util.List;
  *     .addNewModifier("temp", "modularmachinery:energy", "input", 2.0, 1, false)
  *     .build();
  * </pre>
- *
- * <p>The modifiers themselves are Modular Machinery's, including the way they are built: the target and the io type are
- * parsed by {@code RecipeModifierBuilder.create}, so the ids and the operation numbers are the ones a pack author
- * already knows, and an unknown target is reported by Modular Machinery. The second overload takes a modifier built with
- * that builder directly.</p>
- *
- * <p>{@link #build()} registers what was declared, and only an enabled channel of a machine that the channel is
- * declared for counts - see {@code TileAccessPlug}. Declaring the same thing twice is harmless, see
- * {@link ChannelModifierRegistry}.</p>
  */
 @ZenRegister
 @ZenClass("mods.modulargrid.ChannelModifierBuilder")
@@ -55,9 +46,6 @@ public final class CtChannelModifierBuilder {
     /**
      * Starts a declaration for one machine only, independent of the channel's {@code masterTo} list.
      *
-     * <p>The id is written the way {@code masterTo} entries are: a bare name is completed with Modular Machinery's
-     * namespace, a full registry name is taken as it is.</p>
-     *
      * @param machineId registry name of the machine, e.g. {@code alloy_furnace} or {@code modularmachinery:contributor}
      */
     @ZenMethod
@@ -67,9 +55,6 @@ public final class CtChannelModifierBuilder {
 
     /**
      * Declares one modifier a channel provides.
-     *
-     * <p>Like {@code addDataConfig}, this comes in one overload per numeric literal type: ZenScript matches a parameter
-     * type exactly, so {@code 2}, {@code 2L}, {@code 0.5} and {@code 2.0} would otherwise need casts.</p>
      *
      * @param channelId the firm channel, which decides which machines get the modifier by being enabled for them
      * @param target the requirement to change, as Modular Machinery names it, e.g. {@code modularmachinery:duration}
@@ -137,9 +122,6 @@ public final class CtChannelModifierBuilder {
 
     /**
      * Declares a modifier whose value is calculated once from a lazy channel expression when a recipe starts.
-     *
-     * <p>The expression is evaluated once for this recipe, after its inputs are consumed and before recipe progress
-     * begins. Its result is copied into the recipe context, so later channel changes do not affect this recipe.</p>
      *
      * @param channelId the firm channel to sample
      * @param target the requirement to modify

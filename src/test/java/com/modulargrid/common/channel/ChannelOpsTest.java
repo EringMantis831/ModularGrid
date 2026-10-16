@@ -10,9 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@link ChannelOps}: what {@code addDataConfig} does to a channel.
- *
- * <p>The two payload types behave differently on purpose - an energy channel never goes negative and never overflows,
- * a data channel is a plain {@code float} - and a pack author writes the same three operation numbers for both.</p>
  */
 class ChannelOpsTest {
 

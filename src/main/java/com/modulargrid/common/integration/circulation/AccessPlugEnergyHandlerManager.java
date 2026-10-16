@@ -8,10 +8,6 @@ import net.minecraft.tileentity.TileEntity;
 
 /**
  * Tells Circulation Flow Networks that access plugs are energy devices.
- *
- * <p>Managers are sorted by {@link #getPriority()}; this one sits above the generic Forge Energy manager (10) and above
- * the Modular Machinery one (51) so an access plug is always handled by its own handler rather than being reduced to a
- * {@code int} based Forge Energy storage.</p>
  */
 public final class AccessPlugEnergyHandlerManager implements IEnergyHandlerManager {
 

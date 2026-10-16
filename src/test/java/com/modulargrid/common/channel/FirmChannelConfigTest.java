@@ -14,9 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Reading {@code firm_channel.json}: the camelCase keys, the defaults, and what happens to entries a pack author got
  * wrong.
- *
- * <p>One faulty entry must never cost the other channels of the file, so every entry is read on its own and reported
- * while the file is read instead of at some later point.</p>
  */
 class FirmChannelConfigTest {
 

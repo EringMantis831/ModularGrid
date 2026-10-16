@@ -18,10 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Addressing of {@link FirmChannelDefinition firm channels} and the decision which stored firm value may stay.
- *
- * <p>A firm channel is not owned by a player, so its value is kept under the artificial firm owner: a shared channel
- * under its plain id, a per player channel under {@code id@player}. Those keys are the whole addressing scheme, so a
- * mistake here would either leak one player's value into another's channel or lose a value on the next start.</p>
  */
 class FirmChannelTest {
 

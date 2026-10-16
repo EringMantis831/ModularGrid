@@ -13,10 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Value precision of {@link Channel}: energy channels must survive the whole {@code long} range and
  * normal channels must survive the whole {@code float} range, including persistence round trips.
- *
- * <p>These tests exist because the payload types were changed from {@code double} to {@code long}
- * (energy) and {@code float} (normal): a {@code double} silently rounds 2^63-1 to 2^63, and the
- * regression must not come back unnoticed.</p>
  */
 class ChannelTest {
 

@@ -28,15 +28,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * 流通数据节点 GUI - the list of channels the machine may use, with a per channel on/off switch.
- *
- * <p>It reuses Modular Machinery's factory controller background ({@code guifactory.png}, 280x213): the
- * six cells on its left side are the channel rows, the strip next to them is the scrollbar and the panel
- * on the right shows the details of the row the mouse is over. Only the owner of the machine can open
- * this GUI, see {@code BlockAccessPlug#onBlockActivated}.</p>
- *
- * <p>Clicking a row toggles that channel for this machine. The click only sends a request; the new state
- * always comes back from the server through the access plug's tile entity update.</p>
+ * Access plug GUI - the list of channels the machine may use, with a per channel on/off switch.
  */
 @SideOnly(Side.CLIENT)
 public class GuiAccessPlug extends GuiContainerBase<ContainerAccessPlug> {
@@ -292,10 +284,6 @@ public class GuiAccessPlug extends GuiContainerBase<ContainerAccessPlug> {
     /**
      * Draws one state of a button sprite.
      *
-     * <p>The sprite blocks are only as wide as the smallest button that needs them, so the middle of the button is
-     * stretched to the requested width while its left and right edges stay one to one - the same thing vanilla does
-     * with its own button texture, and invisible here because the stretched part is a plain fill.</p>
-     *
      * @param blockHeight height of one state in the sprite, which is also the button's height
      */
     private void drawButton(ResourceLocation texture, int x, int y, int width, int height, int state, int blockHeight) {
@@ -330,10 +318,6 @@ public class GuiAccessPlug extends GuiContainerBase<ContainerAccessPlug> {
 
     /**
      * Draws a texture region into an explicitly sized rectangle, which is what lets the button sprites be stretched.
-     *
-     * <p>{@link Gui#drawModalRectWithCustomSizedTexture(int, int, float, float, int, int, float, float)} ties the
-     * source size to the destination size, so the two are separated here and the sprite sheet size is used for the
-     * texture coordinates.</p>
      */
     private static void drawScaledRect(float x, float y, float width, float height,
                                        float u, float v, float sourceWidth, float sourceHeight) {

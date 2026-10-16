@@ -13,11 +13,6 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 /**
  * Switches the Flux Networks network of one access plug, sent when the player clicks the network row of the plug's GUI.
- *
- * <p>Only a step ({@code +1} / {@code -1}) is sent: the server picks the next network the player may join, which keeps
- * the client free of any knowledge about the networks that exist and re-checks the permission on the server side. Like
- * {@link PktChannelToggle} the message handles itself and the server answers with the plug's regular tile entity update,
- * so the client never has to guess the result.</p>
  */
 public class PktFluxNetworkCycle implements IMessage, IMessageHandler<PktFluxNetworkCycle, IMessage> {
 

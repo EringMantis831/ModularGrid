@@ -11,11 +11,6 @@ import java.util.Set;
 
 /**
  * Enables {@code mixins.modulargrid.compat.json} only when CodeChickenLib is installed.
- *
- * <p>The compatibility mixins in that config patch CodeChickenLib classes, so loading them without
- * the mod would fail outright. ModularGrid itself does not need CodeChickenLib at all; the config
- * exists because Thermal Expansion (a common pack neighbour and a convenient way to feed energy into
- * an access plug) depends on it.</p>
  */
 public class CompatMixinPlugin implements IMixinConfigPlugin {
 
@@ -40,10 +35,6 @@ public class CompatMixinPlugin implements IMixinConfigPlugin {
 
     /**
      * Answers lazily, because Mixin asks this once per target class - long after mod loading started.
-     *
-     * <p>The class file is looked up as a resource rather than with {@code Class.forName}: loading a
-     * CodeChickenLib class while the transformer is still warming up leaves it in Cleanroom's
-     * "invalid classes" set, and every later access to it then fails.</p>
      */
     private static boolean isPresent(String resource) {
         InputStream probe = null;

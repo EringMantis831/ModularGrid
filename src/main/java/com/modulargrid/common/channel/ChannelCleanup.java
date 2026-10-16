@@ -11,12 +11,6 @@ import java.util.List;
 
 /**
  * Cleans up references to channels that are gone.
- *
- * <p>An access plug remembers the channels its owner switched off, which would otherwise leave
- * dangling addresses behind when a channel is deleted. Deletion therefore sweeps every loaded plug
- * right away, and each plug additionally drops unknown addresses on its own (see
- * {@code TileAccessPlug#pruneChannelSwitches}) as a safety net for chunks that were not loaded
- * while the channel was removed.</p>
  */
 public final class ChannelCleanup {
 

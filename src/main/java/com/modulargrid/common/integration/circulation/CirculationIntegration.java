@@ -10,11 +10,6 @@ import net.minecraftforge.fml.common.Optional;
 
 /**
  * Registers the access plug with Circulation Flow Networks.
- *
- * <p>The registration itself is annotated with {@link Optional.Method}: its body is the only place that mentions a
- * Circulation Flow Networks type, and Forge strips it when the mod is missing. Without that the verifier would have to
- * resolve the handler's interface while loading this class, which fails with a {@code NoClassDefFoundError}.
- * Nothing calls the annotated method unless {@link #isAvailable()} said the mod is there.</p>
  */
 public final class CirculationIntegration {
 

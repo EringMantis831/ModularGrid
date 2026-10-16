@@ -16,13 +16,6 @@ import java.util.UUID;
 /**
  * Turns an access plug into a Flux Networks storage connector, so the plug can be part of a network without a
  * separate Flux plug or point next to it.
- *
- * <p>Flux Networks finds connectors through the block entity itself - {@code instanceof IFluxConnector} appears in its
- * GUI, in its TOP integration and in its entity handler - so the plug has to carry the interface. It needs about
- * thirty methods for that, which are all {@code default} methods here handing the work to
- * {@link AccessPlugFluxState}. That keeps two things apart: the plug only knows this one interface (so Forge can strip
- * it, and with it every Flux Networks reference, when the mod is not installed) and the Flux Networks semantics live in
- * one class that is only ever touched while the mod is present.</p>
  */
 public interface AccessPlugFluxConnector extends IFluxStorage {
 

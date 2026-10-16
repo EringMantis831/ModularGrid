@@ -8,17 +8,6 @@ import java.util.UUID;
 /**
  * Tells script code which machine it is running for, so a per player firm channel can be resolved to the instance of
  * that machine's owner.
- *
- * <p>A firm channel that is not public belongs to one player each ({@code channelId@player} in the channel store), so
- * {@code Temp.amount} in a machine's recipe logic is only well defined while the machine is known. Modular Machinery
- * fires every recipe event synchronously from the controller's tick
- * ({@code TileMultiblockMachineController#doRestrictedTick}), so the mixin wraps exactly that call and pushes the
- * controller's owner here.</p>
- *
- * <p>The owners form a stack because a controller tick can nest one (a factory thread ticking a recipe inside the
- * factory controller's tick), and the value is only ever read on the thread that pushed it, which is the thread the
- * handler body runs on. A shared channel ignores this state entirely, and reading a per player channel without a
- * context gives zero instead of somebody else's value.</p>
  */
 public final class ChannelScriptContext {
 

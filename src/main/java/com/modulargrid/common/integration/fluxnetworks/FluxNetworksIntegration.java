@@ -9,10 +9,6 @@ import net.minecraftforge.fml.common.Optional;
 
 /**
  * The only door between the access plug and the Flux Networks integration.
- *
- * <p>None of these methods mention a Flux Networks type in their signature, and the bodies that reach into
- * {@link AccessPlugFluxState} (which does) are annotated with {@link Optional.Method}, so Forge strips them when the
- * mod is missing. Nothing calls them unless {@link #isAvailable()} said the mod is there.</p>
  */
 public final class FluxNetworksIntegration {
 

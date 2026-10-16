@@ -4,9 +4,6 @@ import net.minecraft.nbt.NBTTagCompound;
 
 /**
  * Immutable snapshot of a channel as shown in the access plug GUI.
- *
- * <p>The access plug sends a list of these to the client (through its tile entity network NBT), so
- * the client never has to know about the channel registry, player UUIDs or the values themselves.</p>
  */
 public final class ChannelInfo {
 

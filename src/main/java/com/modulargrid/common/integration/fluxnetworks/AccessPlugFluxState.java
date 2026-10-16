@@ -28,11 +28,6 @@ import java.util.UUID;
  * Everything Flux Networks knows about an access plug: the per connector settings the mod offers (network, priority,
  * limit, surge mode, chunk loading), the transfer handler that bridges one of its cycles to the channel, and the
  * bookkeeping needed to join and leave a network.
- *
- * <p>A plain class on purpose: it implements no Flux Networks interface itself, the plug implements
- * {@link AccessPlugFluxConnector}, whose default methods hand the work over to this state. The settings are stored
- * under the same NBT keys Flux Networks uses for its own connectors, so a settings update the mod builds on the client
- * (it edits a copy of the connector it received) is understood and can be applied by us as well.</p>
  */
 public class AccessPlugFluxState {
 

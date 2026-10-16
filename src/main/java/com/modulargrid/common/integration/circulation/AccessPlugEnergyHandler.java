@@ -16,12 +16,6 @@ import net.minecraft.tileentity.TileEntity;
 /**
  * Makes an access plug an energy device of Circulation Flow Networks, so the nodes of a network can charge the
  * channel and draw from it.
- *
- * <p>The contract is the one the mod's own Forge Energy handler implements: energy is both taken and given, so the
- * device is a {@link IEnergyHandler.EnergyType#STORAGE}, values are reported as pooled {@link EnergyAmount} values
- * ({@link EnergyAmount#obtain(long)} for what this plug can do, the shared {@link EnergyAmounts#ZERO} for "nothing"),
- * and temporary amounts are recycled after they were read. The amounts a caller hands over are never recycled or
- * modified here - the caller owns them - which is what the mod's own handlers do as well.</p>
  */
 public class AccessPlugEnergyHandler implements IEnergyHandler {
 

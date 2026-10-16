@@ -1,5 +1,7 @@
 # ModularGrid
 
+[English](README.en.md) | 中文
+
 ModularGrid 是面向 Minecraft 1.12.2 与 Modular Machinery: Community Edition (MMCE) 的附属 mod，提供流通数据节点和频道系统。
 
 ## 环境
@@ -17,8 +19,9 @@ ModularGrid 是面向 Minecraft 1.12.2 与 Modular Machinery: Community Edition 
 
 构建会同时产出：
 
-- `build/libs/ModularGrid-1.12.2-cleanroom-test.jar`：测试/发布用 SRG jar。
-- `build/libs/ModularGrid-1.12.2-cleanroom-mcp.jar`：仅用于 `run/` 开发实例，不能放入普通客户端。
+- `build/libs/ModularGrid-1.12.2-cleanroom-1.0.0.jar`：发布用 SRG jar，可直接放入普通客户端。
+- `build/libs/ModularGrid-1.12.2-cleanroom-1.0.0-dev.jar`：MCP 命名，仅供 `run/` 开发实例使用。
+- `build/libs/ModularGrid-1.12.2-cleanroom-1.0.0-source.jar`：同一构建的源码包。
 
 ## 流通数据节点
 
