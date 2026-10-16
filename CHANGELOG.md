@@ -2,8 +2,13 @@
 
 ## [1.0.0] - 2026-10-10
 
+- Isolate recipe adapter failures: a third-party adapter that throws (or returns null) is logged and skipped instead
+  of aborting Modular Machinery's `postInit`, and Modular Machinery's own post-script adapter reload still retries it
 ### Fixed
 - Guard IC2 energy-net registration and removal calls when IC2 is absent, avoiding Cleanroom linkage errors
+- Repair Nova Engineering Core's Astral Sorcery adapter reading the infusion recipe array before Astral Sorcery compiled
+  it: ModularGrid asks Astral Sorcery to compile its recipes before the adapter reads them, so an MMCE-first mod order no
+  longer crashes mod loading in `postInit`. Only active when both mods are installed
 
 ### Added
 - Cleanroom Loader 0.6.0 based 1.12.2 mod development workspace on Java 25
@@ -62,4 +67,12 @@
 - Channel values are shown in two forms: a channel row shortens values of more than ten digits to `N.NNeNN` so the unit
   still fits, while the details panel always shows the exact value (at most four decimals)
 - Channel text keeps fixed colours (name, type/owner, value) and the numbers refresh at 4 Hz while the GUI is open
+- Fixed the access plug hiding the machine's own components: Modular Machinery only keeps the general group (native
+  energy/item/fluid hatches uses group id `-1`) when no grouped component is present, so the plug now stands in for the
+  energy hatch of the pattern position it occupies (one component, general group) instead of handing in two grouped ones
+- A plug at a position that is not an energy hatch of a machine that has hatches elsewhere now stays a pure channel
+  bridge, filling the machine's input hatches from the channel and draining its output hatches into it
+- Added a one line report of how a plug joined its machine, plus debug level diagnostics for "the machine generates
+  but the channel stays empty": the first asked/inserted/extracted amounts, and a per 5 seconds summary naming the
+  machine's recipe and progress, the asked/inserted/extracted totals and the channel's value
 - This is a default template changelog that follows the [KeepAChangelog Convention](https://keepachangelog.com/en/1.1.0/)

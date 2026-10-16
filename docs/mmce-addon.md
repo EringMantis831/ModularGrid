@@ -436,3 +436,108 @@ ChannelModifierBuilder.newBuilder("modularmachinery:infinity_source")
 * `/modulargrid reg <名字>`：名字与固有频道 id 相同时被拒绝（脚本按 id 寻址，不允许被玩家频道遮蔽）。
 * `/modulargrid del <名字>`：固有频道**不可删除**，会明确提示由整合包定义。
 * `/modulargrid list`：自己的频道之后会列出配置给该玩家的固有频道，标为「固有」并按上面的三级回退显示名字。
+
+## 8. 兼容修复：新星核心（NovaEngineering-Core）× 星辉（Astral Sorcery）
+
+**症状**：整合包在 `postInit` 阶段直接崩，崩溃报告写成「Caught exception from Modular Machinery: Community Edition」：
+
+```
+NullPointerException: Cannot read the array length because
+  "hellfirepvp.astralsorcery.common.crafting.infusion.InfusionRecipeRegistry.compiledRecipes" is null
+  at InfusionRecipeRegistry.getRecipe
+  at github.kasuminova.novaeng.common.adapter.astralsorcery.AdapterStarlightInfuser.createRecipesFor
+  at RecipeAdapterRegistry.createRecipesFor -> RecipeLoader.loadAdapterRecipes -> RecipeRegistry.loadAdapters
+  at RecipeRegistry.loadRecipeRegistry -> CommonProxy.postInit -> ModularMachinery.postInit
+```
+
+**成因（三方的时序错位，缺陷落在新星核心这一侧）**：
+
+| 参与方 | 事实 |
+| --- | --- |
+| 星辉 | `InfusionRecipeRegistry` 平时用 `recipes` / `mtRecipes` 两张表；编译数组 `compiledRecipes` 只在 `CraftingAccessManager.compile()` 里重建，而该方法只由星辉自己的 `CommonProxy.postInit()` 调用 |
+| MMCE | 适配器配方生成在**自己的 `postInit`**（`CommonProxy.postInit` → `RecipeRegistry.loadRecipeRegistry` → `loadAdapters`） |
+| 新星核心 | 适配器在 NEC `init()` 注册（必须早于 MMCE 的 postInit 才注册得上），但 `createRecipesFor` **数量取自两张原始表、取值却走 `getRecipe(id)`**（即编译数组），且没有就绪判断 |
+
+于是只要 MMCE 在 mod 顺序里排在星辉前面（两者都没声明彼此的顺序，纯看目录发现顺序），MMCE 生成适配器配方时星辉的 `compiledRecipes` 还是 `null` → NPE → 整个 `postInit` 崩。
+对照证据：星辉**自己**在 `InfusionRecipeRegistry.registerInfusionRecipe` 与 `AltarRecipeRegistry` 的注册路径里都用
+`if (CraftingAccessManager.hasCompletedSetup())` 做守卫，而 NEC 一处都没用。
+
+**我们的修法**（`mixin/NovaEngStarlightAdapterMixin` + `common/compat/AstralRecipes`，只改 ModularGrid，不动那两个 mod）：
+
+* 注入 NEC 的 `AdapterStarlightInfuser#createRecipesFor` **HEAD**（目标类用 `targets = "..."` 字符串，签名不依赖 NEC/星辉的类型）。
+* 先调用星辉的 `CraftingAccessManager.compile()`（反射，不引入编译期依赖）：该编译数组就是「`recipes` 顺序 + `mtRecipes` 顺序」逐项拷进数组，
+  而此时**所有 mod 的 `init` 都已经跑完**，两张表内容已定稿，所以这次提前折叠与星辉稍后在自己 `postInit` 里的那次结果完全相同（星辉会再编译一次，幂等）。
+  这样适配器读到的就是一张真实的编译数组，行为与「星辉排在 MMCE 前面」时一致，其余逻辑一行不改。
+* 反射失败（没装星辉、或星辉改了结构）则退化为**跳过本次适配器**：MMCE 在 CraftTweaker 脚本加载后（`ScriptRunEvent.Post` → `RecipeRegistry.reloadAdapters()`，必然在所有 postInit 之后）会重新生成一次，届时自然补齐。
+* 日志：真的提前编译了会打一行 `Compiled Astral Sorcery's infusion recipes early ...`（只在需要时打一次），
+  之后星辉自己的 `postInit` 仍会照常打印 `Post compile recipes`；反射失败时打一条 warn 并说明退化行为。
+* 生效条件：NEC 的适配器类 + 星辉的 `InfusionRecipeRegistry` + `CraftingAccessManager` **同时存在**才启用（`CompatMixinPlugin` 按类资源判定，缺一个就整条 Mixin 不加载）；
+  `@Inject(require = 0)`，NEC 以后改了方法签名只会静默不注入，不会把启动搞崩。
+* 上游修好（把 `getRecipe(id)` 换成遍历两张原始表，或加 `hasCompletedSetup()` 守卫）之后，这条 Mixin 可以直接删掉。
+
+## 9. 适配器失败隔离（MMCE 侧）
+
+**为什么需要**：MMCE 在自己的 `postInit` 里逐个跑**第三方**适配器（`RecipeRegistry.loadAdapters` → `RecipeLoader.loadAdapterRecipes` →
+`RecipeAdapterAccessor.loadRecipesForAdapter`）。任何一个适配器抛异常，整个 `postInit` 就被中断，而崩溃报告把它算在 **MMCE** 头上（§8 那个
+`compiledRecipes` 崩溃就是这么误导定位的），后面的 mod 也全都拿不到 postInit。
+
+**做法**：`mixin/RecipeAdapterIsolationMixin` 用 `@Redirect` 把 `RecipeLoader#loadAdapterRecipes` 里对
+`RecipeAdapterAccessor#loadRecipesForAdapter()` 的两处调用（JSON 适配器一处、CrT `RecipeAdapterBuilder` 一处）包一层，
+交给 `common/compat/AdapterFailures#loadSafely`：
+
+* 成功 → 原样返回（连返回的 List 实例都不换）；
+* 返回 `null` → 记 error 并按空表处理（MMCE 自己会在 `isEmpty()` 上 NPE）；
+* 抛 `Exception` / `LinkageError` → 记 error（带 adapter key 与堆栈）后按空表处理，**其它适配器照常加载**。
+
+**为什么"空表"是合法状态**：MMCE 本来就有这个分支——`Adapter with name ... didn't provide have any recipes!`，
+而且它在 CraftTweaker 脚本加载后会调 `RecipeRegistry.reloadAdapters()` 把所有适配器**再跑一遍**（那时必然已过所有 postInit），
+所以暂时性故障（例如 §8 那种"邻居还没初始化好"）会自愈，而不是永久丢配方。
+
+**边界**：只捕获 `Exception` 与 `LinkageError`。`LinkageError` 覆盖"按另一个版本编译"的家族（`NoSuchMethodError` / `NoClassDefFoundError` /
+`IncompatibleClassChangeError`），这是可选邻居适配器最常见的死法；`StackOverflowError` / `OutOfMemoryError` 仍然向上抛——那不是适配器局部的问题。
+`require = 0`：MMCE 内部不是稳定 API，将来不再这样调用时这条 Mixin 静默不注入，而不是把启动搞崩。
+
+**与 §8 的分工**：§8 是**精确修 NEC 的根因**（首次生成就正确，无空窗），上游合并后可以删；§9 是**通用兜底**（任何适配器都不再能拖垮加载），建议长期保留。
+
+### 坑：helper 不能放在 mixin 包里
+
+Mixin 有一条硬规则：**被声明为 mixin 包的包（这里是 `com.modulargrid.mixin`）里的类，不允许被注入后的目标代码直接引用**。
+踩到时的报错长这样（崩溃报告里算在目标 mod 头上）：
+
+```
+Caused by: org.spongepowered.asm.mixin.transformer.throwables.IllegalClassLoadError:
+com.modulargrid.mixin.AdapterFailures is in a defined mixin package com.modulargrid.mixin.*
+owned by mixins.modulargrid.json and cannot be referenced directly
+```
+
+所以本项目的规矩是：
+
+* **Mixin 类**放 `com.modulargrid.mixin`（配置插件 `CompatMixinPlugin` 也放这里，插件由 Mixin 服务自己加载，不受该规则限制）；
+* **被 mixin 体调用的 helper**必须放在包外，且必须是 `public`（合并后的代码位于目标类所在的包，跨包访问要求 public）——本项目统一放
+  `com.modulargrid.common.*`（例如 `common/compat/AdapterFailures`、`common/compat/AstralRecipes`、`common/channel/ChannelScriptContext`）。
+* 这类错误**只在真机运行时暴露**，`compileJava` / 单测 / jar 检查都发现不了：所以改完 mixin 至少跑一次 `runServer`，
+  并可用 `-Pextra_jvm_args=-Dmixin.debug.export=true` 导出注入后的类，直接 `javap` 确认方法已合并进目标类。
+
+## 坑：组合组件会顶掉机器的原生仓
+
+MMCE 2.3.2 的 `TileMultiblockMachineController#updateComponents()` 只在分组组件表为空时才把
+`generalComponents`（group id = -1，也就是机器自己的原版能量仓、物品仓、流体仓）挂到 key `0` 上；**只要出现任何一个
+group id >= 0 的组件**，`foundComponents` 就只装这些分组组件，原生仓对配方完全不可见。MMCE 自己的组合组件
+（`MEPatternProvider`、`MEPatternMirrorImage`）的 `provideComponents()` 返回空表，所以碰不到这条路径——而插头早期用
+`MachineCombinationComponent` 交了**两个带唯一 group id** 的组件，于是机器"失明"：原生能量仓不再接电、需要物品的配方永远
+无法开始（表现为机器空转，并在 `RecipeCraftingContext.ioTick` 抛 `components is null` 刷屏）。
+
+现在插头按"它顶替的那个仓"加入，见 `TileAccessPlug#componentsForSlot()`：
+
+* 位置是模式里的输入／输出能量仓 → 交**一个**对应方向的组件，group id 为 `-1`（与原生仓同组，不顶掉任何东西）；
+* 位置不是能量仓、而机器在别处有机器组件 → **不交组件**，走桥接：把频道能量灌进机器的输入仓、把输出仓抽进频道
+  （`manageEnergyHatches()`，两个方向都覆盖）；
+* 整张模式里没有任何机器组件（纯频道机器）→ 交输入+输出两个组件，此时没有别的东西会被顶掉。
+
+方向读取方式：`BlockArrayCache.getBlockArrayCache(foundPattern, controllerRotation)` 取旋转后的模式，该位置允许的方块
+状态里若含 `BlockEnergyInputHatch` / `BlockEnergyOutputHatch` 就是它的方向；两个方向都允许视为不确定，退回桥接。判定
+失败（读不到模式、异常）一律当作桥接并 warn 一次——宁可插头不提供端口，也不能让机器成型后失明。
+
+绑定时机同样要留意：`provideComponents()` 由 `updateComponents()` 调用，而这时 `addComponent` 还没跑到，插头自己还不知
+道属于谁。所以 `TileMultiblockMachineControllerMixin` 额外在 `updateComponents` 的 **HEAD** 注入一次，先把结构里所有
+`AccessPlugProvider` 绑到控制器，插头随后才能读到自己所在机器的模式。

@@ -32,3 +32,6 @@ libs/dev
 runclient.cmd
 # dev helper script used to launch the test server (logs to C:\tmp\srv.log)
 runserver.cmd
+
+# log files handed over by the WeChat bridge
+.pi-wechat-files/

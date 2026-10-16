@@ -19,9 +19,18 @@ import java.util.Set;
  */
 public class CompatMixinPlugin implements IMixinConfigPlugin {
 
-    private static final String PROBE_RESOURCE = "codechicken/lib/CodeChickenLib.class";
+    private static final String CODE_CHICKEN_LIB_MIXIN = "com.modulargrid.mixin.CodeChickenLibReflectionMixin";
+    private static final String NOVAENG_STARLIGHT_MIXIN = "com.modulargrid.mixin.NovaEngStarlightAdapterMixin";
+    private static final String CODE_CHICKEN_LIB_RESOURCE = "codechicken/lib/CodeChickenLib.class";
+    private static final String NOVAENG_ADAPTER_RESOURCE =
+            "github/kasuminova/novaeng/common/adapter/astralsorcery/AdapterStarlightInfuser.class";
+    private static final String ASTRAL_RECIPE_REGISTRY_RESOURCE =
+            "hellfirepvp/astralsorcery/common/crafting/infusion/InfusionRecipeRegistry.class";
+    private static final String ASTRAL_ACCESS_MANAGER_RESOURCE =
+            "hellfirepvp/astralsorcery/common/crafting/helper/CraftingAccessManager.class";
 
-    private static Boolean present;
+    private static Boolean codeChickenLibPresent;
+    private static Boolean novaEngStarlightPresent;
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -36,32 +45,57 @@ public class CompatMixinPlugin implements IMixinConfigPlugin {
      * CodeChickenLib class while the transformer is still warming up leaves it in Cleanroom's
      * "invalid classes" set, and every later access to it then fails.</p>
      */
-    private static boolean isCodeChickenLibPresent() {
-        Boolean known = present;
-        if (known == null) {
-            InputStream probe = null;
-            try {
-                probe = CompatMixinPlugin.class.getClassLoader().getResourceAsStream(PROBE_RESOURCE);
-                known = probe != null;
-            } catch (Throwable absent) {
-                known = false;
-            } finally {
-                if (probe != null) {
-                    try {
-                        probe.close();
-                    } catch (IOException ignored) {
-                        // nothing to do about a failed close of a resource that was only probed
-                    }
+    private static boolean isPresent(String resource) {
+        InputStream probe = null;
+        try {
+            probe = CompatMixinPlugin.class.getClassLoader().getResourceAsStream(resource);
+            return probe != null;
+        } catch (Throwable absent) {
+            return false;
+        } finally {
+            if (probe != null) {
+                try {
+                    probe.close();
+                } catch (IOException ignored) {
+                    // nothing to do about a failed close of a resource that was only probed
                 }
             }
-            present = known;
+        }
+    }
+
+    private static boolean isCodeChickenLibPresent() {
+        Boolean known = codeChickenLibPresent;
+        if (known == null) {
+            known = isPresent(CODE_CHICKEN_LIB_RESOURCE);
+            codeChickenLibPresent = known;
+        }
+        return known;
+    }
+
+    /**
+     * Both mods have to be there: the mixin repairs a Nova Engineering Core class and needs Astral Sorcery's recipe
+     * registry with its {@code CraftingAccessManager} to be able to compile that registry early.
+     */
+    private static boolean isNovaEngStarlightIntegrationPresent() {
+        Boolean known = novaEngStarlightPresent;
+        if (known == null) {
+            known = isPresent(NOVAENG_ADAPTER_RESOURCE)
+                    && isPresent(ASTRAL_RECIPE_REGISTRY_RESOURCE)
+                    && isPresent(ASTRAL_ACCESS_MANAGER_RESOURCE);
+            novaEngStarlightPresent = known;
         }
         return known;
     }
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return isCodeChickenLibPresent();
+        if (CODE_CHICKEN_LIB_MIXIN.equals(mixinClassName)) {
+            return isCodeChickenLibPresent();
+        }
+        if (NOVAENG_STARLIGHT_MIXIN.equals(mixinClassName)) {
+            return isNovaEngStarlightIntegrationPresent();
+        }
+        return false;
     }
 
     @Override

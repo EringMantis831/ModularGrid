@@ -2,6 +2,7 @@ package com.modulargrid.common.tile;
 
 import com.modulargrid.ModularGrid;
 import com.modulargrid.common.block.AccessPlugProvider;
+import com.modulargrid.common.block.BlockAccessPlug;
 import com.modulargrid.common.channel.Channel;
 import com.modulargrid.common.channel.ChannelInfo;
 import com.modulargrid.common.channel.ChannelRegistry;
@@ -14,14 +15,23 @@ import com.modulargrid.common.integration.fluxnetworks.FluxNetworksIntegration;
 import com.modulargrid.common.integration.circulation.CirculationIntegration;
 import com.modulargrid.common.util.EnergyIo;
 import github.kasuminova.mmce.common.tile.base.MachineCombinationComponent;
+import hellfirepvp.modularmachinery.common.block.BlockEnergyInputHatch;
+import hellfirepvp.modularmachinery.common.block.BlockEnergyOutputHatch;
+import hellfirepvp.modularmachinery.common.block.BlockMachineComponent;
+import hellfirepvp.modularmachinery.common.crafting.ActiveMachineRecipe;
 import hellfirepvp.modularmachinery.common.crafting.helper.ProcessingComponent;
 import hellfirepvp.modularmachinery.common.machine.IOType;
 import hellfirepvp.modularmachinery.common.machine.MachineComponent;
+import hellfirepvp.modularmachinery.common.machine.TaggedPositionBlockArray;
 import hellfirepvp.modularmachinery.common.modifier.RecipeModifier;
+import hellfirepvp.modularmachinery.common.tiles.TileMachineController;
 import hellfirepvp.modularmachinery.common.tiles.base.MachineComponentTile;
 import hellfirepvp.modularmachinery.common.tiles.base.TileEntityRestrictedTick;
 import hellfirepvp.modularmachinery.common.tiles.base.TileEnergyHatch;
 import hellfirepvp.modularmachinery.common.tiles.base.TileMultiblockMachineController;
+import hellfirepvp.modularmachinery.common.util.BlockArray;
+import hellfirepvp.modularmachinery.common.util.BlockArrayCache;
+import hellfirepvp.modularmachinery.common.util.IBlockStateDescriptor;
 import hellfirepvp.modularmachinery.common.util.IEnergyHandler;
 import hellfirepvp.modularmachinery.common.util.IEnergyHandlerAsync;
 import ic2.api.energy.event.EnergyTileLoadEvent;
@@ -30,6 +40,7 @@ import ic2.api.energy.tile.IEnergyAcceptor;
 import ic2.api.energy.tile.IEnergyEmitter;
 import ic2.api.energy.tile.IEnergySink;
 import ic2.api.energy.tile.IEnergySource;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -66,9 +77,9 @@ import java.util.UUID;
  * 流通数据节点 / Data Flow Access Plug tile.
  *
  * <p>The plug is the machine's connection point to the player's {@link Channel channels}. It joins
- * the multiblock as an energy component pair (input + output) whose storage <i>is</i> the owning
- * player's energy channel, so a machine can run without any physical energy hatch, and it keeps a
- * per machine set of channels the owner switched off in its GUI.</p>
+ * the multiblock as the energy hatch of the position it stands on - see {@link #componentsForSlot()} for what that
+ * means exactly - and its storage <i>is</i> the owning player's energy channel, so a machine can run without any
+ * physical energy hatch. It also keeps a per machine set of channels the owner switched off in its GUI.</p>
  *
  * <p>Binding to the controller is established by {@code TileMultiblockMachineControllerMixin}, see
  * {@link AccessPlugProvider}. The binding is validated lazily: as soon as the controller is gone or
@@ -130,6 +141,27 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     private static final int DISABLED_PRUNE_INTERVAL = 100;
 
     /**
+     * How many energy moves pass between two debug reports of the same kind. Energy moves every tick, so a debug run
+     * would otherwise drown in one line per plug per tick while the interesting part - which direction moves at all -
+     * is already visible from the first line.
+     */
+    private static final int MOVE_LOG_INTERVAL = 100;
+
+    /** How many of the first questions from a machine's energy requirement are traced, see {@link #traceHandlerCall}. */
+    private static final int HANDLER_TRACE_LIMIT = 3;
+
+    /** How many kinds of interactions {@link #traceHandlerCall} counts, see {@link #traceSlot(String)}. */
+    private static final int TRACE_KINDS = 6;
+
+    /**
+     * How many ticks pass between two activity reports of the same plug.
+     *
+     * <p>The report is only written while Modular Machinery asked the plug for energy during that window, so a plug
+     * no recipe touches stays quiet, see {@link #reportEnergyActivity()}.</p>
+     */
+    private static final int ACTIVITY_REPORT_INTERVAL = 100;
+
+    /**
      * IndustrialCraft 2 conversion, matching Modular Machinery's own hatches: 1 EU is worth 4 RF.
      */
     private static final int RF_PER_EU = 4;
@@ -141,11 +173,25 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     private static final double IC2_TRANSFER_LIMIT = 1 << ((IC2_TIER + 1) * 2 + 1);
 
     /**
-     * Components handed to the multiblock. They are built once and cached: Modular Machinery keys its
-     * component map by tile entity, so both components need a distinct, <b>stable</b> group id or
-     * they would overwrite each other on every structure rebuild.
+     * Component standing in for the energy hatch the machine's pattern expects at this plug's position. It carries the
+     * general group id, exactly like Modular Machinery's own hatches, so it sits next to the machine's other
+     * components instead of replacing them, see {@link #componentsForSlot()}.
      */
-    private final List<MachineComponent<?>> components;
+    private final MachineComponent<?> inputHatchComponent = new ChannelEnergyHatch(IOType.INPUT, -1L);
+    private final MachineComponent<?> outputHatchComponent = new ChannelEnergyHatch(IOType.OUTPUT, -1L);
+
+    /**
+     * Both channel energy ports, handed to a machine that has no energy hatch of its own at all. They are built once
+     * and cached: Modular Machinery keys its component map by tile entity, so two components of the same tile need a
+     * distinct, <b>stable</b> group id or they would overwrite each other on every structure rebuild.
+     */
+    private final List<MachineComponent<?>> bothEnergyComponents;
+
+    /** Last reported reason for the component set, see {@link #reportComponentDecision(String)}. */
+    private String componentDecision = "";
+
+    /** Set once a component decision failed, see {@link #reportComponentFailure(Throwable)}. */
+    private boolean componentFailureReported;
 
     private final ChannelEnergyHandler energyHandler = new ChannelEnergyHandler();
 
@@ -208,14 +254,14 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         List<MachineComponent<?>> built = new ArrayList<>(2);
         built.add(new ChannelEnergyHatch(IOType.INPUT, getUniqueGroupID()));
         built.add(new ChannelEnergyHatch(IOType.OUTPUT, getUniqueGroupID()));
-        this.components = Collections.unmodifiableList(built);
+        this.bothEnergyComponents = Collections.unmodifiableList(built);
     }
 
     // -------------------------------------------------------------- components
 
     /**
-     * The plug joins the multiblock through {@link #provideComponents()} only, a single component
-     * would clash with the second one in Modular Machinery's tile entity keyed component map.
+     * A single component would clash with the second one in Modular Machinery's tile entity keyed component map, so
+     * the plug reports everything through {@link #provideComponents()}.
      */
     @Nullable
     @Override
@@ -225,7 +271,159 @@ public class TileAccessPlug extends TileEntityRestrictedTick
 
     @Override
     public Collection<MachineComponent<?>> provideComponents() {
-        return components;
+        try {
+            return componentsForSlot();
+        } catch (RuntimeException | LinkageError error) {
+            // A machine that cannot be built is worse than a plug without components: never let a failed decision
+            // escape the structure check, and let the plug bridge the machine's own hatches instead
+            reportComponentFailure(error);
+            return Collections.emptyList();
+        }
+    }
+
+    /** Reports a failed component decision once per plug, see {@link #provideComponents()}. */
+    private void reportComponentFailure(Throwable error) {
+        if (!componentFailureReported) {
+            componentFailureReported = true;
+            ModularGrid.LOGGER.warn("Access plug at {} could not work out its energy component, bridging the "
+                    + "machine's own hatches instead", getPos(), error);
+        }
+    }
+
+    /**
+     * The components this plug hands to the machine it stands in.
+     *
+     * <p>Modular Machinery collects the components of a tile entity with a non-negative group id into
+     * {@code foundComponents} and, as soon as that map holds anything at all, keeps the machine's general components -
+     * every native hatch and bus, group id {@code -1} - out of the recipe context. A combination component is expected
+     * to cover the whole machine, so handing in two grouped components makes the machine blind to its own hatches: a
+     * native energy hatch stops taking power and a recipe that needs items can never start.</p>
+     *
+     * <p>The plug therefore behaves like the hatch it replaces rather than like a combination that covers
+     * everything:</p>
+     *
+     * <ul>
+     *     <li>it stands in for the energy hatch the machine's pattern expects at its position, in the general group,
+     *         next to the machine's other components,</li>
+     *     <li>in a machine that has energy hatches elsewhere, a plug at a position that is not an energy hatch stays a
+     *         pure channel bridge: it keeps those hatches filled from the channel and drains them into it, see
+     *         {@link #manageEnergyHatches()},</li>
+     *     <li>only a machine whose pattern has no machine component at all gets both channel ports, which is safe there
+     *         because such a machine has nothing else to lose.</li>
+     * </ul>
+     */
+    private Collection<MachineComponent<?>> componentsForSlot() {
+        if (rotatedPattern() == null) {
+            // no machine to read: never guess, a wrong component set would hide the machine's own hatches
+            reportComponentDecision("has no machine to join, bridging nothing");
+            return Collections.emptyList();
+        }
+        IOType direction = hatchDirection();
+        if (direction == IOType.INPUT) {
+            reportComponentDecision("stands in for the energy input hatch of its position");
+            return Collections.singletonList(inputHatchComponent);
+        }
+        if (direction == IOType.OUTPUT) {
+            reportComponentDecision("stands in for the energy output hatch of its position");
+            return Collections.singletonList(outputHatchComponent);
+        }
+        if (patternAcceptsMachineComponents()) {
+            reportComponentDecision("bridges the machine's own hatches");
+            return Collections.emptyList();
+        }
+        reportComponentDecision("is the machine's only energy port (input and output)");
+        return bothEnergyComponents;
+    }
+
+    /**
+     * @return the direction of the energy hatch the machine's pattern expects at this plug's position, {@code null}
+     *         when that position is not an energy hatch position of the machine
+     */
+    @Nullable
+    private IOType hatchDirection() {
+        BlockArray.BlockInformation information = patternInformationAtPlug();
+        if (information == null) {
+            return null;
+        }
+        IOType direction = null;
+        for (IBlockStateDescriptor descriptor : information.getMatchingStates()) {
+            for (IBlockState state : descriptor.getApplicable()) {
+                IOType candidate = energyHatchDirection(state);
+                if (candidate == null) {
+                    continue;
+                }
+                if (direction != null && direction != candidate) {
+                    // the pattern accepts either direction here, which hatch to stand in for is then up to the recipe
+                    return null;
+                }
+                direction = candidate;
+            }
+        }
+        return direction;
+    }
+
+    /**
+     * @return whether the machine's pattern expects a Modular Machinery component - a hatch or a bus, its own or this
+     *         plug - anywhere. A machine that does have one is served by the plug's hatch bridging instead of by
+     *         components of the plug itself, so those components stay visible to the recipe.
+     */
+    private boolean patternAcceptsMachineComponents() {
+        TaggedPositionBlockArray pattern = rotatedPattern();
+        if (pattern == null) {
+            return false;
+        }
+        for (BlockArray.BlockInformation information : pattern.getPattern().values()) {
+            for (IBlockStateDescriptor descriptor : information.getMatchingStates()) {
+                for (IBlockState state : descriptor.getApplicable()) {
+                    if (state.getBlock() instanceof BlockMachineComponent && !(state.getBlock() instanceof BlockAccessPlug)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** @return the pattern entry of the position this plug stands on, {@code null} while it is not part of a machine */
+    @Nullable
+    private BlockArray.BlockInformation patternInformationAtPlug() {
+        TileMultiblockMachineController machine = controller;
+        TaggedPositionBlockArray pattern = rotatedPattern();
+        if (machine == null || pattern == null) {
+            return null;
+        }
+        return pattern.getPattern().get(getPos().subtract(machine.getPos()));
+    }
+
+    /** @return the machine's pattern in its built rotation, {@code null} while the plug is not bound to a machine */
+    @Nullable
+    private TaggedPositionBlockArray rotatedPattern() {
+        TileMultiblockMachineController machine = controller;
+        if (machine == null || machine.getFoundPattern() == null || machine.getFoundMachine() == null
+                || machine.getControllerRotation() == null) {
+            return null;
+        }
+        return BlockArrayCache.getBlockArrayCache(machine.getFoundPattern(), machine.getControllerRotation());
+    }
+
+    /** @return the direction an energy hatch block of the given state stands for, {@code null} for any other block */
+    @Nullable
+    private static IOType energyHatchDirection(IBlockState state) {
+        if (state.getBlock() instanceof BlockEnergyInputHatch) {
+            return IOType.INPUT;
+        }
+        return state.getBlock() instanceof BlockEnergyOutputHatch ? IOType.OUTPUT : null;
+    }
+
+    /**
+     * Reports how the plug joined the machine, once per change. Which components a plug hands over decides whether the
+     * machine still sees its own hatches, so "why did my machine lose its energy hatch" is answered by this line.
+     */
+    private void reportComponentDecision(String decision) {
+        if (!decision.equals(componentDecision)) {
+            componentDecision = decision;
+            ModularGrid.LOGGER.info("Access plug at {} {}", getPos(), decision);
+        }
     }
 
     /** Energy component whose storage is the player's energy channel. */
@@ -337,6 +535,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         }
 
         long now = getWorld().getTotalWorldTime();
+        reportEnergyActivity();
         if (now >= nextDisabledPrune) {
             nextDisabledPrune = now + DISABLED_PRUNE_INTERVAL;
             pruneChannelSwitches();
@@ -494,15 +693,17 @@ public class TileAccessPlug extends TileEntityRestrictedTick
     private void validateController() {
         TileMultiblockMachineController machine = controller;
         if (machine == null) {
-            activeEnergyChannel = null;
             return;
         }
         if (machine.isInvalid() || machine.getWorld() != getWorld() || !machine.isStructureFormed()) {
             // the modifiers live on the controller, so they have to go before the reference does
             clearChannelModifiers(machine);
             controller = null;
-            activeEnergyChannel = null;
         }
+        // The channel is deliberately left alone: without a controller the plug falls back to the player that placed
+        // it, and {@link #refreshEnergyChannel()} runs right after this on every tick and resolves that channel
+        // anyway. Clearing it here would make the setter see "no channel" and re-report the very same channel every
+        // tick, and it would open a window in which the machine's recipe thread sees the plug as channel-less.
     }
 
     /**
@@ -986,13 +1187,36 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         }
     }
 
+    /** Remembers the moves already reported at debug level, see {@link #MOVE_LOG_INTERVAL}. */
+    private int hatchMoveCount;
+    private int machineEnergyMoveCount;
+
+    /** Interactions already traced per kind, see {@link #HANDLER_TRACE_LIMIT} and {@link #traceSlot(String)}. */
+    private final int[] handlerCallTrace = new int[TRACE_KINDS];
+
+    /** What Modular Machinery asked this plug for, reported by {@link #reportEnergyActivity()}. */
+    private volatile long roomQueryCount;
+    private volatile long roomEmptyCount;
+    private volatile long currentQueryCount;
+    private volatile long insertCallCount;
+    private volatile long insertedEnergy;
+    private volatile long extractCallCount;
+    private volatile long extractedEnergy;
+    private volatile long refusedCount;
+
+    /** Set while {@link ChannelEnergyHandler#getRemainingCapacity()} reads its own stored energy, see {@code getCurrentEnergy}. */
+    private boolean ownRoomQuery;
+
+    private long nextActivityReport;
+    private boolean activityToReport;
+
     /**
      * Fills an input hatch from the channel. The channel is debited first and refunded if the hatch refuses
      * or takes less than offered, so the pool can never be drained for energy that was not delivered.
      *
      * @return {@code true} if energy was moved
      */
-    private static boolean topUpInputHatch(Channel channel, IEnergyHandler hatch) {
+    private boolean topUpInputHatch(Channel channel, IEnergyHandler hatch) {
         long offer = Math.min(hatch.getRemainingCapacity(), channel.getEnergyValue());
         if (offer <= 0L) {
             return false;
@@ -1010,6 +1234,9 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         if (moved < taken) {
             channel.giveEnergy(taken - moved);
         }
+        if (moved > 0L) {
+            logHatchMove("filled an input hatch with", moved, hatch);
+        }
         return moved > 0L;
     }
 
@@ -1018,7 +1245,7 @@ public class TileAccessPlug extends TileEntityRestrictedTick
      *
      * @return {@code true} if energy was moved
      */
-    private static boolean drainOutputHatch(Channel channel, IEnergyHandler hatch) {
+    private boolean drainOutputHatch(Channel channel, IEnergyHandler hatch) {
         long stored = hatch.getCurrentEnergy();
         if (stored <= 0L) {
             return false;
@@ -1035,7 +1262,130 @@ public class TileAccessPlug extends TileEntityRestrictedTick
             return false;
         }
         channel.giveEnergy(moved);
+        logHatchMove("drained", moved, hatch);
         return true;
+    }
+
+    /**
+     * Reports energy moved between the channel and one of the machine's own hatches, throttled by
+     * {@link #MOVE_LOG_INTERVAL}. This is the "energy that goes around the plug" case, and a pack whose machine
+     * feeds a plain hatch instead of the plug is exactly what these lines make visible.
+     */
+    private void logHatchMove(String what, long amount, IEnergyHandler hatch) {
+        int count = ++hatchMoveCount;
+        if (count != 1 && count % MOVE_LOG_INTERVAL != 0) {
+            return;
+        }
+        ModularGrid.LOGGER.debug("Access plug at {}: {} {} RF from {}", getPos(), what, amount,
+                hatch.getClass().getSimpleName());
+    }
+
+    /**
+     * Reports energy a machine put into the channel through the plug's own energy component, throttled by
+     * {@link #MOVE_LOG_INTERVAL}. A machine that generates energy reports here, a machine that consumes it does not.
+     */
+    private void logMachineEnergy(long amount) {
+        int count = ++machineEnergyMoveCount;
+        if (count != 1 && count % MOVE_LOG_INTERVAL != 0) {
+            return;
+        }
+        ModularGrid.LOGGER.debug("Access plug at {}: machine put {} RF into the channel ({} times so far)",
+                getPos(), amount, count);
+    }
+
+    /**
+     * Reports the first few interactions between Modular Machinery's energy requirement and this plug at debug level.
+     *
+     * <p>"The machine generates, the channel stays empty" has two very different causes: the requirement never gets as
+     * far as this storage, or it does and the energy ends up somewhere else. These lines tell the two apart without
+     * guessing: {@code room} and {@code current} are the two questions a requirement asks before it moves anything,
+     * {@code insert} and {@code extract} are the moves themselves - with the exact amount it asked for, {@code 0}
+     * included - and {@code refused} means the plug had no channel at that moment. The amounts are sampled once per
+     * kind, so a long run is summarised by {@link #reportEnergyActivity()} instead.</p>
+     */
+    private void traceHandlerCall(String what, long amount) {
+        int slot = traceSlot(what);
+        if (slot < 0) {
+            return;
+        }
+        int seen = ++handlerCallTrace[slot];
+        if (seen > HANDLER_TRACE_LIMIT) {
+            return;
+        }
+        ModularGrid.LOGGER.debug("Access plug at {}: machine energy requirement {} {} ({}. time)",
+                getPos(), what, amount, seen);
+    }
+
+    /** @return the trace counter of a kind name, {@code -1} when the name is unknown */
+    private static int traceSlot(String what) {
+        switch (what) {
+            case "room":
+                return 0;
+            case "current":
+                return 1;
+            case "insert":
+                return 2;
+            case "extract":
+                return 3;
+            case "refused":
+                return 4;
+            case "in":
+                return 5;
+            default:
+                return -1;
+        }
+    }
+
+    /**
+     * Reports what Modular Machinery asked this plug for, once every {@link #ACTIVITY_REPORT_INTERVAL} ticks while it
+     * asked for anything at all, at debug level.
+     *
+     * <p>A report naming the recipe and its progress, the energy the machine handed over and the channel's value is
+     * what separates "the machine is not running", "the machine runs but asks the plug for nothing" and "the machine
+     * runs and the plug silently drops it".</p>
+     */
+    private void reportEnergyActivity() {
+        long now = getWorld().getTotalWorldTime();
+        if (now < nextActivityReport) {
+            return;
+        }
+        nextActivityReport = now + ACTIVITY_REPORT_INTERVAL;
+        if (!activityToReport) {
+            return;
+        }
+        activityToReport = false;
+        if (!ModularGrid.LOGGER.isDebugEnabled()) {
+            return;
+        }
+        Channel channel = activeEnergyChannel;
+        ModularGrid.LOGGER.debug("Access plug at {} ({}): room asked {} times ({} empty), current asked {} times, "
+                        + "inserted {} RF in {} calls, extracted {} RF in {} calls, refused {} times, channel {} = {} RF",
+                getPos(), describeMachineActivity(), roomQueryCount, roomEmptyCount, currentQueryCount,
+                insertedEnergy, insertCallCount, extractedEnergy, extractCallCount, refusedCount,
+                channel == null ? "<none>" : channel.getAddress(), getStoredEnergy());
+    }
+
+    /**
+     * @return the owning machine as one short phrase for {@link #reportEnergyActivity()}: whether the plug is bound at
+     *         all, whether the structure is still there and which recipe the machine is running
+     */
+    private String describeMachineActivity() {
+        TileMultiblockMachineController machine = controller;
+        if (machine == null) {
+            return "no machine";
+        }
+        if (!machine.isStructureFormed()) {
+            return "structure broken";
+        }
+        if (machine instanceof TileMachineController running) {
+            ActiveMachineRecipe recipe = running.getActiveRecipe();
+            if (recipe == null) {
+                return "idle";
+            }
+            return recipe.getRegistryName() + " " + recipe.getTick() + "/" + recipe.getTotalTick()
+                    + " x" + recipe.getParallelism();
+        }
+        return "formed";
     }
 
     /**
@@ -1424,7 +1774,14 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         @Override
         public long getCurrentEnergy() {
             Channel channel = activeEnergyChannel;
-            return channel == null ? 0L : channel.getEnergyValue();
+            long value = channel == null ? 0L : channel.getEnergyValue();
+            // the room query below reads this itself, that call is not the requirement asking
+            if (!ownRoomQuery) {
+                currentQueryCount++;
+                activityToReport = true;
+                traceHandlerCall("current", value);
+            }
+            return value;
         }
 
         @Override
@@ -1442,15 +1799,43 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         }
 
         @Override
+        public long getRemainingCapacity() {
+            // same as the interface default (getMaxEnergy() - getCurrentEnergy()), spelled out so the trace can report it
+            ownRoomQuery = true;
+            long room;
+            try {
+                room = getMaxEnergy() - getCurrentEnergy();
+            } finally {
+                ownRoomQuery = false;
+            }
+            roomQueryCount++;
+            if (room <= 0L) {
+                roomEmptyCount++;
+            }
+            activityToReport = true;
+            traceHandlerCall("room", room);
+            return room;
+        }
+
+        @Override
         public boolean extractEnergy(long energy) {
             Channel channel = activeEnergyChannel;
-            if (channel == null || energy <= 0L || channel.getEnergyValue() < energy) {
+            if (channel == null || energy <= 0L) {
+                if (channel == null) {
+                    refusedCount++;
+                    activityToReport = true;
+                    traceHandlerCall("refused", energy);
+                }
                 return false;
             }
-            if (channel.takeEnergy(energy) != energy) {
+            if (channel.getEnergyValue() < energy || channel.takeEnergy(energy) != energy) {
                 return false;
             }
             energyValueDirty = true;
+            extractCallCount++;
+            extractedEnergy += energy;
+            activityToReport = true;
+            traceHandlerCall("extract", energy);
             return true;
         }
 
@@ -1458,13 +1843,26 @@ public class TileAccessPlug extends TileEntityRestrictedTick
         public boolean receiveEnergy(long energy) {
             Channel channel = activeEnergyChannel;
             if (channel == null || energy <= 0L) {
+                if (channel == null) {
+                    refusedCount++;
+                    activityToReport = true;
+                    traceHandlerCall("refused", energy);
+                }
                 return false;
             }
             long before = channel.getEnergyValue();
             channel.giveEnergy(energy);
             energyValueDirty = true;
             // an unbounded pool can only refuse when it is already saturated
-            return channel.getEnergyValue() != before;
+            long gained = channel.getEnergyValue() - before;
+            if (gained > 0L) {
+                insertCallCount++;
+                insertedEnergy += gained;
+                activityToReport = true;
+                traceHandlerCall("in", gained);
+                logMachineEnergy(gained);
+            }
+            return gained > 0L;
         }
 
         @Override

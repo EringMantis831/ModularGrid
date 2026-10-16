@@ -8,6 +8,7 @@
   "mixins": [
     "MachineRegistryMixin",
     "MachineScriptContextMixin",
+    "RecipeAdapterIsolationMixin",
     "TileMultiblockMachineControllerMixin"
   ],
   "server": [],
