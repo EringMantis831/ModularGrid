@@ -38,3 +38,8 @@ ModularGrid 是面向 Minecraft 1.12.2 与 Modular Machinery: Community Edition 
 脚本可通过频道值配置配方数据，也可使用 `ChannelModifierBuilder` 声明静态或配方开始时采样的增益。惰性表达式以频道对象为左操作数，例如 `inf_point.inverse()`、`inf_point * 0.5`；`1.0 / inf_point` 无效。表达式在配方开始时读取，并固定本次配方的增益值。
 
 完整的 MMCE 接入与实现说明见 [docs/mmce-addon.md](docs/mmce-addon.md)，版本记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 许可
+
+本项目以 GNU Lesser General Public License v3.0（LGPL-3.0）发布，全文见 [LICENSE](LICENSE)，其中引用的 GPLv3 全文见
+[COPYING](COPYING)，第三方声明见 [NOTICE](NOTICE)。

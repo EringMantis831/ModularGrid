@@ -644,6 +644,11 @@ apply from: 'gradle/scripts/extra.gradle'
 //   ModularGrid-<mc>-cleanroom-<version>-source.jar  the sources of the same build
 tasks.named('jar').configure {
     archiveFileName = "ModularGrid-1.12.2-cleanroom-${propertyString('mod_version')}-dev.jar"
+
+    // LGPL-3.0 wants the license next to the object code
+    from(rootProject.file('LICENSE')) { into 'META-INF' }
+    from(rootProject.file('COPYING')) { into 'META-INF' }
+    from(rootProject.file('NOTICE')) { into 'META-INF' }
 }
 
 // The jar that is handed out: remapped to SRG names, which is what Forge remaps back to MCP at runtime.
@@ -654,4 +659,7 @@ tasks.matching { it.name == 'remapJar' }.configureEach {
 // The sources of the same build, for reading the addon instead of running it.
 tasks.matching { it.name == 'sourcesJar' }.configureEach {
     archiveFileName = "ModularGrid-1.12.2-cleanroom-${propertyString('mod_version')}-source.jar"
+    from(rootProject.file('LICENSE')) { into 'META-INF' }
+    from(rootProject.file('COPYING')) { into 'META-INF' }
+    from(rootProject.file('NOTICE')) { into 'META-INF' }
 }

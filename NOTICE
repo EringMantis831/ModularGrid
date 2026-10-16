@@ -1,0 +1,16 @@
+ModularGrid
+Copyright (c) 2026 iNf7y_Entr60py
+
+This addon is released under the GNU Lesser General Public License, version 3.0
+(LGPL-3.0). LICENSE holds the LGPL-3.0 text, COPYING the GNU GPL version 3 text it is
+built on. There is no warranty, to the extent permitted by law.
+
+Third-party notices
+
+- The Gradle build scaffolding (build.gradle, settings.gradle, gradle/, gradlew,
+  gradlew.bat) comes from CleanroomMC's ForgeDevEnv template and stays under its MIT
+  license, Copyright (c) 2022 CleanroomMC.
+- ModularGrid targets Modular Machinery: Community Edition and adjusts it, and
+  NovaEngineering-Core when that mod is present, at runtime through Mixin. Neither mod is
+  included in this jar, and both remain the property of their own authors under their own
+  license.

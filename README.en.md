@@ -48,3 +48,9 @@ starts and its gain stays fixed for that craft.
 
 The full MMCE integration and implementation notes live in [docs/mmce-addon.md](docs/mmce-addon.md), the version
 history in [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+ModularGrid is released under the GNU Lesser General Public License v3.0 (LGPL-3.0). See [LICENSE](LICENSE) for the
+license text, [COPYING](COPYING) for the GNU GPL v3 text it is built on, and [NOTICE](NOTICE) for third-party
+notices.
