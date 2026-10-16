@@ -243,3 +243,5 @@ eval "set -- $(
     )" '"$@"'
 
 exec "$JAVACMD" "$@"
+
+# The Gradle version and distribution are pinned in gradle/wrapper/gradle-wrapper.properties

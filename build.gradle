@@ -1,5 +1,5 @@
 /**
- * Cleanroom 1.12.2 mod development workspace.
+ * ModularGrid, a Modular Machinery: Community Edition addon for Minecraft 1.12.2.
  *
  * Toolchain: Unimined (Cleanroom fork) + Cleanroom Loader + Java 25
  * It is advised that you do not edit anything in the build.gradle; unless you are sure of what you are doing
@@ -637,8 +637,11 @@ apply from: 'gradle/scripts/extra.gradle'
 // Packaged output
 // ---------------------------------------------------------------------------------------------------------------------
 
-// The MCP named jar only a development instance may load: it is also the one copied into run/<side>/mods.
-// A normal client needs the remapped (SRG named) jar instead, see the name given to remapJar below.
+// Three artifacts come out of a build:
+//   ModularGrid-<mc>-cleanroom-<version>.jar         the release jar, SRG named, what a client loads
+//   ModularGrid-<mc>-cleanroom-<version>-dev.jar     MCP named, only a development instance may load it (also the
+//                                                   one copied into run/<side>/mods)
+//   ModularGrid-<mc>-cleanroom-<version>-source.jar  the sources of the same build
 tasks.named('jar').configure {
     archiveFileName = "ModularGrid-1.12.2-cleanroom-${propertyString('mod_version')}-dev.jar"
 }

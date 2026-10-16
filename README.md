@@ -2,7 +2,7 @@
 
 [English](README.en.md) | 中文
 
-ModularGrid 是面向 Minecraft 1.12.2 与 Modular Machinery: Community Edition (MMCE) 的附属 mod，提供流通数据节点和频道系统。
+ModularGrid 是面向 Minecraft 1.12.2 与 Modular Machinery: Community Edition (MMCE) 的附属 mod：为 MMCE 加入频道系统，并提供新的数据调参方式。
 
 ## 环境
 

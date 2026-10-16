@@ -90,3 +90,4 @@ exit /b %EXIT_CODE%
 if "%OS%"=="Windows_NT" endlocal
 
 :omega
+@rem The Gradle version and distribution are pinned in gradle\wrapper\gradle-wrapper.properties

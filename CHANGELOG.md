@@ -2,6 +2,7 @@
 
 ## [1.0.0] - 2026-10-10
 
+### Added
 - Isolate recipe adapter failures: a third-party adapter that throws (or returns null) is logged and skipped instead
   of aborting Modular Machinery's `postInit`, and Modular Machinery's own post-script adapter reload still retries it
 ### Fixed

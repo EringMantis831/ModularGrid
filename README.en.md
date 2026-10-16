@@ -2,8 +2,8 @@
 
 English | [中文](README.md)
 
-ModularGrid is an addon for Minecraft 1.12.2 and Modular Machinery: Community Edition (MMCE). It adds the Data Flow
-Access Plug and the channel system behind it.
+ModularGrid adds a channel system to Minecraft 1.12.2 and Modular Machinery: Community Edition (MMCE), along
+with new ways to tweak recipe data. The Data Flow Access Plug is the block that connects a machine to it.
 
 ## Environment
 

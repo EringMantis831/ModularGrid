@@ -26,6 +26,7 @@ run
 
 # dev run logs that end up in the project root
 logs
+*.log
 libs/dev
 
 # dev helper script used to launch the test client without a console window

@@ -1,8 +1,8 @@
-# A deployment template that works out of the box
-# It supports these objectives:
+# Release pipeline of ModularGrid, run for every version tag:
 # - Deploy to Maven (Build Job) [Secrets: MAVEN_USER, MAVEN_PASS]
 # - Deploy to CurseForge (Upload Job) [Secrets: CURSEFORGE_TOKEN]
 # - Deploy to Modrinth (Upload Job) [Secrets: MODRINTH_TOKEN]
+# Each target is only used while the matching property in gradle.properties is true.
 
 name: Deploy
 
